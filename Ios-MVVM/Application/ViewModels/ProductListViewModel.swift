@@ -41,7 +41,7 @@ class ProductListViewModel: ObservableObject {
     }
 
     func didSelectProduct(_ product: Product) {
-        coordinator?.navigate(to: .productDetail(product))
+        coordinator?.showProduct(product)
     }
 
     func retry() {

@@ -8,7 +8,13 @@
 import Foundation
 
 protocol Coordinator: AnyObject {
-    func navigate(to route: Route)
+    // MARK: - Basic Navigation
     func pop()
     func popToRoot()
+
+    // MARK: - Intent-Based Navigation
+    func showProduct(_ product: Product)
+    func showProducts()
+    func showOrders()
+    func showReviews()
 }

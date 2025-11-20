@@ -34,7 +34,7 @@ class AppCoordinator: ObservableObject, Coordinator {
     }
 
     // MARK: - Navigation Methods
-    func navigate(to route: Route) {
+    private func navigate(to route: Route) {
         paths[currentTab]?.append(route)
     }
 
@@ -46,6 +46,23 @@ class AppCoordinator: ObservableObject, Coordinator {
 
     func popToRoot() {
         paths[currentTab] = NavigationPath()
+    }
+
+    // MARK: - Intent-Based Navigation
+    func showProduct(_ product: Product) {
+        navigate(to: .productDetail(product))
+    }
+
+    func showProducts() {
+        navigate(to: .productList)
+    }
+
+    func showOrders() {
+        navigate(to: .orders)
+    }
+
+    func showReviews() {
+        navigate(to: .reviews)
     }
 
     // MARK: - Path Binding Helper

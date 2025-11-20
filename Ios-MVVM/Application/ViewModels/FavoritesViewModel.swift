@@ -33,7 +33,7 @@ class FavoritesViewModel: ObservableObject {
     }
 
     func didSelectProduct(_ product: Product) {
-        coordinator?.navigate(to: .productDetail(product))
+        coordinator?.showProduct(product)
     }
 
     func removeFavorite(_ product: Product) {
