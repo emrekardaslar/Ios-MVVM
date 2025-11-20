@@ -42,6 +42,8 @@ class AppCoordinator: ObservableObject, Coordinator {
     @ViewBuilder
     func build(route: Route) -> some View {
         switch route {
+        case .home:
+            buildHomeView()
         case .productList:
             buildProductListView()
         case .productDetail(let product):
@@ -50,6 +52,12 @@ class AppCoordinator: ObservableObject, Coordinator {
     }
 
     // MARK: - Private View Builders
+    @MainActor
+    private func buildHomeView() -> some View {
+        let viewModel = HomeViewModel(coordinator: self)
+        return HomeView(viewModel: viewModel)
+    }
+
     @MainActor
     private func buildProductListView() -> some View {
         let viewModel = ProductListViewModel(

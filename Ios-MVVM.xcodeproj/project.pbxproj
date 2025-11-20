@@ -39,6 +39,9 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		409F91832ECF7DE9007C3E96 /* Ios-MVVM */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;

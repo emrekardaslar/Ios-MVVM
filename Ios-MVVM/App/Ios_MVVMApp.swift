@@ -21,13 +21,7 @@ struct Ios_MVVMApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack(path: $coordinator.path) {
-                coordinator.build(route: .productList)
-                    .navigationDestination(for: Route.self) { route in
-                        coordinator.build(route: route)
-                    }
-            }
-            .environmentObject(coordinator)
+            TabBarView(coordinator: coordinator)
         }
     }
 }
