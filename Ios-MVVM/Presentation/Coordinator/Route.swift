@@ -13,4 +13,14 @@ enum Route: Hashable {
     case productDetail(Product)
     case favorites
     case orders
+
+    var identifier: String {
+        switch self {
+        case .home: return "home"
+        case .productList: return "productList"
+        case .productDetail: return "productDetail"
+        case .favorites: return "favorites"
+        case .orders: return "orders"
+        }
+    }
 }

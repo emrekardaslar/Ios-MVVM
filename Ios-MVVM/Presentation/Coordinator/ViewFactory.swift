@@ -16,13 +16,13 @@ class ViewFactory {
     /// This is the ONLY place you need to add new routes!
     static func registerViews(coordinator: AppCoordinator) {
         // Home Tab
-        coordinator.register(route: .home) {
+        coordinator.register(identifier: Route.home.identifier) { _ in
             let viewModel = HomeViewModel(coordinator: coordinator)
             HomeView(viewModel: viewModel)
         }
 
         // Products Tab
-        coordinator.register(route: .productList) {
+        coordinator.register(identifier: Route.productList.identifier) { _ in
             let viewModel = ProductListViewModel(
                 productRepository: coordinator.productRepository,
                 coordinator: coordinator
@@ -30,19 +30,26 @@ class ViewFactory {
             ProductListView(viewModel: viewModel)
         }
 
+        // Product Detail (extracts product from route)
+        coordinator.register(identifier: Route.productDetail(Product.mock).identifier) { route in
+            if case .productDetail(let product) = route {
+                let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+                ProductDetailView(viewModel: viewModel)
+            } else {
+                Text("Invalid route").foregroundColor(.red)
+            }
+        }
+
         // Favorites Tab
-        coordinator.register(route: .favorites) {
+        coordinator.register(identifier: Route.favorites.identifier) { _ in
             let viewModel = FavoritesViewModel(coordinator: coordinator)
             FavoritesView(viewModel: viewModel)
         }
 
         // Orders (navigated from Home)
-        coordinator.register(route: .orders) {
+        coordinator.register(identifier: Route.orders.identifier) { _ in
             let viewModel = OrdersViewModel(coordinator: coordinator)
             OrdersView(viewModel: viewModel)
         }
-
-        // Note: .productDetail is handled separately in AppCoordinator.build()
-        // because it has an associated value (Product)
     }
 }

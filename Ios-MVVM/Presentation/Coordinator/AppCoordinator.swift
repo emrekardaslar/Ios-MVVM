@@ -22,7 +22,7 @@ class AppCoordinator: ObservableObject, Coordinator {
 
     // MARK: - Private Properties
     private let container: DIContainer
-    private var viewBuilders: [Route: @MainActor () -> AnyView] = [:]
+    private var viewBuilders: [String: @MainActor (Route) -> AnyView] = [:]
 
     // MARK: - Initialization
     init(container: DIContainer) {
@@ -58,27 +58,19 @@ class AppCoordinator: ObservableObject, Coordinator {
 
     // MARK: - Registration
     @MainActor
-    func register<V: View>(route: Route, @ViewBuilder builder: @escaping () -> V) {
-        viewBuilders[route] = { AnyView(builder()) }
+    func register<V: View>(identifier: String, @ViewBuilder builder: @escaping (Route) -> V) {
+        viewBuilders[identifier] = { route in AnyView(builder(route)) }
     }
 
     // MARK: - View Builder
     @MainActor
     @ViewBuilder
     func build(route: Route) -> some View {
-        // Handle routes with associated values first
-        switch route {
-        case .productDetail(let product):
-            let viewModel = ProductDetailViewModel(product: product, coordinator: self)
-            ProductDetailView(viewModel: viewModel)
-        default:
-            // Use registered builders
-            if let builder = viewBuilders[route] {
-                builder()
-            } else {
-                Text("Route not registered: \(String(describing: route))")
-                    .foregroundColor(.red)
-            }
+        if let builder = viewBuilders[route.identifier] {
+            builder(route)
+        } else {
+            Text("Route not registered: \(route.identifier)")
+                .foregroundColor(.red)
         }
     }
 
