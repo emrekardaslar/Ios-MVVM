@@ -31,18 +31,30 @@ Ios-MVVM/
 │       └── NetworkService.swift
 ├── Application/
 │   ├── ViewModels/
+│   │   ├── HomeViewModel.swift
 │   │   ├── ProductListViewModel.swift
-│   │   └── ProductDetailViewModel.swift
+│   │   ├── ProductDetailViewModel.swift
+│   │   ├── FavoritesViewModel.swift
+│   │   ├── OrdersViewModel.swift
+│   │   └── ReviewsViewModel.swift
 │   └── Models/
-│       └── Product.swift
+│       ├── Product.swift
+│       └── Order.swift
 ├── Presentation/
 │   ├── Views/
+│   │   ├── TabBarView.swift
+│   │   ├── HomeView.swift
 │   │   ├── ProductListView.swift
-│   │   └── ProductDetailView.swift
+│   │   ├── ProductDetailView.swift
+│   │   ├── FavoritesView.swift
+│   │   ├── OrdersView.swift
+│   │   └── ReviewsView.swift
 │   └── Coordinator/
 │       ├── Coordinator.swift
 │       ├── AppCoordinator.swift
-│       └── Route.swift
+│       ├── Route.swift
+│       ├── Tab.swift
+│       └── ViewFactory.swift
 ├── DI/
 │   └── DIContainer.swift
 └── App/
@@ -123,43 +135,116 @@ Ios-MVVM/
 - ViewModels remain testable (no navigation dependencies)
 - Centralized routing makes deep linking easier
 - Reusable navigation flows
+- Intent-based API provides semantic navigation methods
 
 ### Implementation Approach
 
-**1. Route Definition (Enum-based)**
+**1. Route Definition (Enum-based with Auto-Generated Identifiers)**
 ```swift
 enum Route: Hashable {
+    case home
     case productList
     case productDetail(Product)
-}
-```
+    case favorites
+    case orders
+    case reviews
 
-**2. Coordinator Protocol**
-```swift
-protocol Coordinator {
-    func navigate(to route: Route)
-    func pop()
-    func popToRoot()
-}
-```
-
-**3. AppCoordinator (Implementation)**
-- Holds `NavigationPath` for SwiftUI NavigationStack
-- Implements navigation methods
-- Creates Views with injected ViewModels
-- ViewModels receive coordinator reference
-
-**4. ViewModel → Coordinator Communication**
-ViewModels hold a reference to the coordinator:
-```swift
-class ProductListViewModel: ObservableObject {
-    private let coordinator: Coordinator
-
-    func didSelectProduct(_ product: Product) {
-        coordinator.navigate(to: .productDetail(product))
+    // Auto-generates identifier using Mirror reflection
+    // Associated values map to same identifier (e.g., all productDetail routes → "productDetail")
+    var identifier: String {
+        Mirror(reflecting: self).children.first?.label ?? String(describing: self)
     }
 }
 ```
+
+**2. Tab Definition**
+```swift
+enum Tab: String, CaseIterable {
+    case home
+    case products
+    case favorites
+
+    var rootRoute: Route {
+        switch self {
+        case .home: return .home
+        case .products: return .productList
+        case .favorites: return .favorites
+        }
+    }
+}
+```
+
+**3. Coordinator Protocol (Intent-Based Navigation)**
+```swift
+protocol Coordinator: AnyObject {
+    // Basic Navigation
+    func pop()
+    func popToRoot()
+
+    // Intent-Based Navigation
+    func showProduct(_ product: Product)
+    func showProducts()
+    func showOrders()
+    func showReviews()
+}
+```
+
+**4. AppCoordinator (Implementation)**
+- Holds `NavigationPath` per tab (dictionary-based) for independent tab navigation
+- Implements intent methods that map to routes internally
+- Uses registration pattern for view creation (no switch statements!)
+- ViewModels receive coordinator reference
+
+**5. ViewFactory (Registration Pattern)**
+Single place to register all routes:
+```swift
+class ViewFactory {
+    static func registerViews(coordinator: AppCoordinator) {
+        coordinator.register(identifier: Route.home.identifier) { _ in
+            HomeViewModel(coordinator: coordinator) → HomeView
+        }
+
+        coordinator.register(identifier: Route.productDetail(Product.mock).identifier) { route in
+            if case .productDetail(let product) = route {
+                ProductDetailViewModel(product: product, coordinator: coordinator) → ProductDetailView
+            }
+        }
+        // ... other registrations
+    }
+}
+```
+
+**Benefits:**
+- Adding new routes only requires one line in ViewFactory
+- No switch statements to maintain
+- Type-safe route identifiers
+- Automatic identifier generation
+
+**How to Add a New Route (Example: Reviews):**
+1. Add case to Route enum: `case reviews`
+2. Add intent method to Coordinator protocol: `func showReviews()`
+3. Implement in AppCoordinator: `func showReviews() { navigate(to: .reviews) }`
+4. Register in ViewFactory: `coordinator.register(identifier: Route.reviews.identifier) { ... }`
+
+That's it! The identifier is auto-generated, no manual string mapping needed.
+
+**6. ViewModel → Coordinator Communication (Intent-Based)**
+ViewModels express intent, not routes:
+```swift
+class ProductListViewModel: ObservableObject {
+    private weak var coordinator: Coordinator?
+
+    func didSelectProduct(_ product: Product) {
+        coordinator?.showProduct(product) // Intent, not route!
+    }
+}
+```
+
+**Why Intent-Based?**
+- ViewModels don't know about routes (better separation)
+- Coordinator decides routing logic
+- More semantic and readable
+- Easier to modify routing without touching ViewModels
 
 ---
 
@@ -211,21 +296,36 @@ A simple container that holds and provides dependencies:
    └─> View automatically updates (SwiftUI)
 ```
 
-### Example: Navigation
+### Example: Navigation (Intent-Based)
 
 ```
 1. User taps product
    └─> View calls ViewModel.didSelectProduct(product)
 
-2. ViewModel delegates to Coordinator
-   └─> coordinator.navigate(to: .productDetail(product))
+2. ViewModel expresses intent to Coordinator
+   └─> coordinator.showProduct(product)
 
-3. Coordinator updates NavigationPath
-   └─> SwiftUI NavigationStack pushes new view
+3. Coordinator maps intent to route
+   └─> navigate(to: .productDetail(product)) [private method]
+   └─> Updates current tab's NavigationPath
 
-4. Coordinator creates ProductDetailView
+4. SwiftUI NavigationStack triggers navigationDestination
+   └─> Coordinator.build(route) called
+
+5. Coordinator looks up registered view builder
+   └─> ViewFactory registration returns ProductDetailView
    └─> Injects ProductDetailViewModel with product + dependencies
    └─> View appears
+```
+
+### Multi-Tab Navigation
+
+Each tab maintains its own NavigationPath:
+```swift
+@Published private(set) var paths: [Tab: NavigationPath] = [:]
+
+// Tab switching preserves navigation state
+// Example: Products tab can have ProductDetail stack while Home tab is at root
 ```
 
 ---
@@ -259,19 +359,25 @@ A simple container that holds and provides dependencies:
 
 ---
 
-## Example Use Case: Product List → Product Detail
+## Example Use Case: Multi-Tab App with Navigation
 
 **Screens:**
-1. **Product List**: Grid/List of products with image, name, price
-2. **Product Detail**: Full product info with description
+1. **Home Tab**: Welcome screen with quick actions and stats
+   - Navigate to Orders
+   - Navigate to Reviews
+2. **Products Tab**: List of products with search/filter
+   - Navigate to Product Detail
+3. **Favorites Tab**: Saved products
+   - Navigate to Product Detail
 
 **Flow:**
 1. App launches → DIContainer created
-2. AppCoordinator initialized with NavigationStack
-3. ProductListView shown (root)
-4. User taps product → ViewModel notifies Coordinator
-5. Coordinator pushes ProductDetailView
-6. ProductDetailView displays product data
+2. AppCoordinator initialized with TabBar and NavigationStacks
+3. ViewFactory registers all routes
+4. TabBarView shown with three tabs
+5. Each tab has independent navigation state
+6. User navigates within tabs → Coordinator manages stack per tab
+7. Tab switching preserves navigation history
 
 **Data Source:**
 - Mock API or real REST API (configurable)
