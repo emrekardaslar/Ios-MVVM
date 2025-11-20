@@ -8,17 +8,12 @@
 import SwiftUI
 
 struct TabBarView: View {
-    @StateObject private var coordinator: AppCoordinator
-    @State private var selectedTab: Tab = .home
-
-    init(coordinator: AppCoordinator) {
-        _coordinator = StateObject(wrappedValue: coordinator)
-    }
+    @ObservedObject var coordinator: AppCoordinator
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $coordinator.currentTab) {
             ForEach(Tab.allCases, id: \.self) { tab in
-                NavigationStack(path: $coordinator.path) {
+                NavigationStack(path: coordinator.binding(for: tab)) {
                     coordinator.build(route: tab.rootRoute)
                         .navigationDestination(for: Route.self) { route in
                             coordinator.build(route: route)

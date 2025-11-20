@@ -16,25 +16,42 @@
 import SwiftUI
 
 class AppCoordinator: ObservableObject, Coordinator {
-    @Published var path = NavigationPath()
+    // MARK: - Published Properties
+    @Published var currentTab: Tab = .home
+    @Published private(set) var paths: [Tab: NavigationPath] = [:]
+
     private let container: DIContainer
 
+    // MARK: - Initialization
     init(container: DIContainer) {
         self.container = container
-    }
-
-    func navigate(to route: Route) {
-        path.append(route)
-    }
-
-    func pop() {
-        if !path.isEmpty {
-            path.removeLast()
+        // Initialize paths for all tabs
+        Tab.allCases.forEach { tab in
+            paths[tab] = NavigationPath()
         }
     }
 
+    // MARK: - Navigation Methods
+    func navigate(to route: Route) {
+        paths[currentTab]?.append(route)
+    }
+
+    func pop() {
+        guard var path = paths[currentTab], !path.isEmpty else { return }
+        path.removeLast()
+        paths[currentTab] = path
+    }
+
     func popToRoot() {
-        path = NavigationPath()
+        paths[currentTab] = NavigationPath()
+    }
+
+    // MARK: - Path Binding Helper
+    func binding(for tab: Tab) -> Binding<NavigationPath> {
+        Binding(
+            get: { self.paths[tab] ?? NavigationPath() },
+            set: { self.paths[tab] = $0 }
+        )
     }
 
     // MARK: - View Builders
