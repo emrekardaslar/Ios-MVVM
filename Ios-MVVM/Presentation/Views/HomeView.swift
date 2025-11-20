@@ -93,7 +93,10 @@ struct HomeView: View {
                     icon: "star.fill",
                     title: "Reviews",
                     value: "8",
-                    color: .orange
+                    color: .orange,
+                    action: {
+                        viewModel.navigateToReviews()
+                    }
                 )
 
                 StatCard(

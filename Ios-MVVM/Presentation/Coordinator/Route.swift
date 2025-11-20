@@ -13,6 +13,7 @@ enum Route: Hashable {
     case productDetail(Product)
     case favorites
     case orders
+    case reviews
 
     var identifier: String {
         Mirror(reflecting: self).children.first?.label ?? String(describing: self)

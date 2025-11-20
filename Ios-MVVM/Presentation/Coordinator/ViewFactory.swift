@@ -51,5 +51,11 @@ class ViewFactory {
             let viewModel = OrdersViewModel(coordinator: coordinator)
             OrdersView(viewModel: viewModel)
         }
+
+        // Reviews (navigated from Home)
+        coordinator.register(identifier: Route.reviews.identifier) { _ in
+            let viewModel = ReviewsViewModel(coordinator: coordinator)
+            ReviewsView(viewModel: viewModel)
+        }
     }
 }

@@ -29,4 +29,8 @@ class HomeViewModel: ObservableObject {
     func navigateToOrders() {
         coordinator?.navigate(to: .orders)
     }
+
+    func navigateToReviews() {
+        coordinator?.navigate(to: .reviews)
+    }
 }
