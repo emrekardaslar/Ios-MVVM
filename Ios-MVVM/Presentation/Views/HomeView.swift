@@ -83,7 +83,10 @@ struct HomeView: View {
                     icon: "cart.fill",
                     title: "Orders",
                     value: "12",
-                    color: .green
+                    color: .green,
+                    action: {
+                        viewModel.navigateToOrders()
+                    }
                 )
 
                 StatCard(
@@ -139,8 +142,22 @@ struct StatCard: View {
     let title: String
     let value: String
     let color: Color
+    var action: (() -> Void)? = nil
 
     var body: some View {
+        Group {
+            if let action = action {
+                Button(action: action) {
+                    cardContent
+                }
+                .buttonStyle(.plain)
+            } else {
+                cardContent
+            }
+        }
+    }
+
+    private var cardContent: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title2)
