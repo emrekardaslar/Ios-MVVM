@@ -16,6 +16,12 @@ struct Ios_MVVMApp: App {
         let container = DIContainer.shared
         let coordinator = AppCoordinator(container: container)
         container.setCoordinator(coordinator)
+
+        // Register all views with the coordinator (must happen before StateObject creation)
+        MainActor.assumeIsolated {
+            ViewFactory.registerViews(coordinator: coordinator)
+        }
+
         _coordinator = StateObject(wrappedValue: coordinator)
     }
 

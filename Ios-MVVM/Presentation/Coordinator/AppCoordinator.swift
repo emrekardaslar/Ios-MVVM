@@ -20,7 +20,9 @@ class AppCoordinator: ObservableObject, Coordinator {
     @Published var currentTab: Tab = .home
     @Published private(set) var paths: [Tab: NavigationPath] = [:]
 
+    // MARK: - Private Properties
     private let container: DIContainer
+    private var viewBuilders: [Route: @MainActor () -> AnyView] = [:]
 
     // MARK: - Initialization
     init(container: DIContainer) {
@@ -54,58 +56,34 @@ class AppCoordinator: ObservableObject, Coordinator {
         )
     }
 
-    // MARK: - View Builders
+    // MARK: - Registration
+    @MainActor
+    func register<V: View>(route: Route, @ViewBuilder builder: @escaping () -> V) {
+        viewBuilders[route] = { AnyView(builder()) }
+    }
+
+    // MARK: - View Builder
     @MainActor
     @ViewBuilder
     func build(route: Route) -> some View {
+        // Handle routes with associated values first
         switch route {
-        case .home:
-            buildHomeView()
-        case .productList:
-            buildProductListView()
         case .productDetail(let product):
-            buildProductDetailView(product: product)
-        case .favorites:
-            buildFavoritesView()
-        case .orders:
-            buildOrdersView()
+            let viewModel = ProductDetailViewModel(product: product, coordinator: self)
+            ProductDetailView(viewModel: viewModel)
+        default:
+            // Use registered builders
+            if let builder = viewBuilders[route] {
+                builder()
+            } else {
+                Text("Route not registered: \(String(describing: route))")
+                    .foregroundColor(.red)
+            }
         }
     }
 
-    // MARK: - Private View Builders
-    @MainActor
-    private func buildHomeView() -> some View {
-        let viewModel = HomeViewModel(coordinator: self)
-        return HomeView(viewModel: viewModel)
-    }
-
-    @MainActor
-    private func buildProductListView() -> some View {
-        let viewModel = ProductListViewModel(
-            productRepository: container.productRepository,
-            coordinator: self
-        )
-        return ProductListView(viewModel: viewModel)
-    }
-
-    @MainActor
-    private func buildProductDetailView(product: Product) -> some View {
-        let viewModel = ProductDetailViewModel(
-            product: product,
-            coordinator: self
-        )
-        return ProductDetailView(viewModel: viewModel)
-    }
-
-    @MainActor
-    private func buildFavoritesView() -> some View {
-        let viewModel = FavoritesViewModel(coordinator: self)
-        return FavoritesView(viewModel: viewModel)
-    }
-
-    @MainActor
-    private func buildOrdersView() -> some View {
-        let viewModel = OrdersViewModel(coordinator: self)
-        return OrdersView(viewModel: viewModel)
+    // MARK: - Dependency Access
+    var productRepository: ProductRepositoryProtocol {
+        container.productRepository
     }
 }
