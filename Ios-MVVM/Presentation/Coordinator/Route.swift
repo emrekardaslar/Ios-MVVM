@@ -11,4 +11,5 @@ enum Route: Hashable {
     case home
     case productList
     case productDetail(Product)
+    case favorites
 }

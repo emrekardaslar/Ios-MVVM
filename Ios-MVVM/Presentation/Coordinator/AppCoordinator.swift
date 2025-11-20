@@ -65,6 +65,8 @@ class AppCoordinator: ObservableObject, Coordinator {
             buildProductListView()
         case .productDetail(let product):
             buildProductDetailView(product: product)
+        case .favorites:
+            buildFavoritesView()
         }
     }
 
@@ -91,5 +93,11 @@ class AppCoordinator: ObservableObject, Coordinator {
             coordinator: self
         )
         return ProductDetailView(viewModel: viewModel)
+    }
+
+    @MainActor
+    private func buildFavoritesView() -> some View {
+        let viewModel = FavoritesViewModel(coordinator: self)
+        return FavoritesView(viewModel: viewModel)
     }
 }

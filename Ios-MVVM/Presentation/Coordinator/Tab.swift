@@ -10,6 +10,7 @@ import SwiftUI
 enum Tab: String, CaseIterable {
     case home
     case products
+    case favorites
 
     var title: String {
         switch self {
@@ -17,6 +18,8 @@ enum Tab: String, CaseIterable {
             return "Home"
         case .products:
             return "Products"
+        case .favorites:
+            return "Favorites"
         }
     }
 
@@ -26,6 +29,8 @@ enum Tab: String, CaseIterable {
             return "house.fill"
         case .products:
             return "bag.fill"
+        case .favorites:
+            return "heart.fill"
         }
     }
 
@@ -35,6 +40,8 @@ enum Tab: String, CaseIterable {
             return .home
         case .products:
             return .productList
+        case .favorites:
+            return .favorites
         }
     }
 }
