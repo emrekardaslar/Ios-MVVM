@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 protocol Coordinator: AnyObject {
     // MARK: - Basic Navigation
     func pop()
