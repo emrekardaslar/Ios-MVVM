@@ -54,7 +54,9 @@ Ios-MVVM/
 │       ├── AppCoordinator.swift
 │       ├── Route.swift
 │       ├── Tab.swift
-│       └── ViewFactory.swift
+│       ├── Routable.swift
+│       ├── RoutableRegistry.swift
+│       └── RoutableTypes.swift (auto-generated)
 ├── DI/
 │   └── DIContainer.swift
 └── App/
@@ -195,40 +197,69 @@ protocol Coordinator: AnyObject {
 - Uses registration pattern for view creation (no switch statements!)
 - ViewModels receive coordinator reference
 
-**5. ViewFactory (Registration Pattern)**
-Single place to register all routes:
+**5. Routable Protocol (Self-Registering ViewModels)**
+Each ViewModel declares how to build itself:
 ```swift
-class ViewFactory {
-    static func registerViews(coordinator: AppCoordinator) {
-        coordinator.register(identifier: Route.home.identifier) { _ in
-            HomeViewModel(coordinator: coordinator) → HomeView
-        }
+@MainActor
+protocol Routable {
+    static var routeIdentifier: String { get }
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView
+}
 
-        coordinator.register(identifier: Route.productDetail(Product.mock).identifier) { route in
-            if case .productDetail(let product) = route {
-                ProductDetailViewModel(product: product, coordinator: coordinator) → ProductDetailView
+// Each ViewModel implements Routable
+extension HomeViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.home.identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = HomeViewModel(coordinator: coordinator)
+        return AnyView(HomeView(viewModel: viewModel))
+    }
+}
+```
+
+**6. Automatic Registration (Build-Time Script)**
+A build script automatically scans for Routable types and generates:
+```swift
+// RoutableTypes.swift (auto-generated, in .gitignore)
+let routableTypes: [any Routable.Type] = [
+    HomeViewModel.self,
+    ProductListViewModel.self,
+    ProductDetailViewModel.self,
+    // ... automatically added by build script
+]
+```
+
+**7. RoutableRegistry (Uses Generated Array)**
+```swift
+class RoutableRegistry {
+    static func registerAll(with coordinator: AppCoordinator) {
+        routableTypes.forEach { routableType in
+            coordinator.register(identifier: routableType.routeIdentifier) { route in
+                routableType.createView(from: route, coordinator: coordinator)
             }
         }
-        // ... other registrations
     }
 }
 ```
 
 **Benefits:**
-- Adding new routes only requires one line in ViewFactory
-- No switch statements to maintain
-- Type-safe route identifiers
-- Automatic identifier generation
+- **Zero manual registration**: Build script handles everything
+- **Compile-time errors**: Missing script = build failure
+- **Co-located logic**: View building lives with each ViewModel
+- **Clean git history**: Generated file in .gitignore
 
-**How to Add a New Route (Example: Reviews):**
-1. Add case to Route enum: `case reviews`
-2. Add intent method to Coordinator protocol: `func showReviews()`
-3. Implement in AppCoordinator: `func showReviews() { navigate(to: .reviews) }`
-4. Register in ViewFactory: `coordinator.register(identifier: Route.reviews.identifier) { ... }`
+**How to Add a New Route (Example: Settings):**
+1. Add case to Route enum: `case settings`
+2. Add intent method to Coordinator protocol: `func showSettings()`
+3. Implement in AppCoordinator: `func showSettings() { navigate(to: .settings) }`
+4. Create SettingsViewModel with Routable extension
+5. **Build** → Automatically added to RoutableTypes.swift!
 
-That's it! The identifier is auto-generated, no manual string mapping needed.
+That's it! No manual array maintenance needed.
 
-**6. ViewModel → Coordinator Communication (Intent-Based)**
+**8. ViewModel → Coordinator Communication (Intent-Based)**
 ViewModels express intent, not routes:
 ```swift
 class ProductListViewModel: ObservableObject {
@@ -313,7 +344,7 @@ A simple container that holds and provides dependencies:
    └─> Coordinator.build(route) called
 
 5. Coordinator looks up registered view builder
-   └─> ViewFactory registration returns ProductDetailView
+   └─> Routable type's createView() method called
    └─> Injects ProductDetailViewModel with product + dependencies
    └─> View appears
 ```
@@ -372,12 +403,13 @@ Each tab maintains its own NavigationPath:
 
 **Flow:**
 1. App launches → DIContainer created
-2. AppCoordinator initialized with TabBar and NavigationStacks
-3. ViewFactory registers all routes
-4. TabBarView shown with three tabs
-5. Each tab has independent navigation state
-6. User navigates within tabs → Coordinator manages stack per tab
-7. Tab switching preserves navigation history
+2. Build script generates RoutableTypes.swift with all ViewModels
+3. AppCoordinator initialized with TabBar and NavigationStacks
+4. RoutableRegistry.registerAll() auto-registers all routes
+5. TabBarView shown with three tabs
+6. Each tab has independent navigation state
+7. User navigates within tabs → Coordinator manages stack per tab
+8. Tab switching preserves navigation history
 
 **Data Source:**
 - Mock API or real REST API (configurable)
@@ -386,9 +418,31 @@ Each tab maintains its own NavigationPath:
 
 ---
 
+## Build Script & Auto-Generation
+
+### How It Works
+A shell script (`Scripts/generate_routable_registry.sh`) runs before compilation:
+1. Scans all Swift files for `extension X: Routable`
+2. Extracts ViewModel type names
+3. Generates `RoutableTypes.swift` with array of all types
+4. File is in `.gitignore` (not tracked in git)
+
+### Build Configuration
+- **Xcode Build Phase**: "Generate Routable Registry" runs before "Compile Sources"
+- **Sandbox Disabled**: `ENABLE_USER_SCRIPT_SANDBOXING = NO` (required for script access)
+- **Output**: `Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift`
+
+### Benefits
+- **No manual maintenance**: Add ViewModel → Build → Auto-registered
+- **Compile-time safety**: Missing script = build fails with clear error
+- **Clean git diffs**: Generated file excluded from version control
+
+---
+
 ## Future Enhancements
 
 This template can be extended with:
+- Deep linking support (URL → Route mapping)
 - Authentication flow (separate AuthCoordinator)
 - Local persistence (CoreData/Realm)
 - Caching layer in repositories
