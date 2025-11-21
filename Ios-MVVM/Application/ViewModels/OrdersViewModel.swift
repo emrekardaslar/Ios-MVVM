@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 class OrdersViewModel: ObservableObject {
@@ -37,5 +38,17 @@ class OrdersViewModel: ObservableObject {
         // In a real app, this would navigate to order detail
         // For now, we'll just print
         print("Selected order: \(order.id)")
+    }
+}
+
+// MARK: - Routable
+extension OrdersViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.orders.identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = OrdersViewModel(coordinator: coordinator)
+        return AnyView(OrdersView(viewModel: viewModel))
     }
 }

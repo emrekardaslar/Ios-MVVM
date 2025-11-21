@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 class FavoritesViewModel: ObservableObject {
@@ -38,5 +39,17 @@ class FavoritesViewModel: ObservableObject {
 
     func removeFavorite(_ product: Product) {
         favoriteProducts.removeAll { $0.id == product.id }
+    }
+}
+
+// MARK: - Routable
+extension FavoritesViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.favorites.identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = FavoritesViewModel(coordinator: coordinator)
+        return AnyView(FavoritesView(viewModel: viewModel))
     }
 }

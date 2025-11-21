@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 struct Review: Identifiable, Hashable {
     let id = UUID()
@@ -63,5 +64,17 @@ class ReviewsViewModel: ObservableObject {
                 date: Date().addingTimeInterval(-86400 * 1)
             )
         ]
+    }
+}
+
+// MARK: - Routable
+extension ReviewsViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.reviews.identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = ReviewsViewModel(coordinator: coordinator)
+        return AnyView(ReviewsView(viewModel: viewModel))
     }
 }

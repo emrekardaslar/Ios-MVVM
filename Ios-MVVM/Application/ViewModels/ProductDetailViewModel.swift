@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 class ProductDetailViewModel: ObservableObject {
@@ -35,5 +36,21 @@ class ProductDetailViewModel: ObservableObject {
     // MARK: - Public Methods
     func goBack() {
         coordinator?.pop()
+    }
+}
+
+// MARK: - Routable
+extension ProductDetailViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.productDetail(Product.mock).identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        if case .productDetail(let product) = route {
+            let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+            return AnyView(ProductDetailView(viewModel: viewModel))
+        } else {
+            return AnyView(Text("Invalid route for ProductDetail").foregroundColor(.red))
+        }
     }
 }

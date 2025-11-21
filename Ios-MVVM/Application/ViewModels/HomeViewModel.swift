@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 class HomeViewModel: ObservableObject {
@@ -32,5 +33,17 @@ class HomeViewModel: ObservableObject {
 
     func navigateToReviews() {
         coordinator?.showReviews()
+    }
+}
+
+// MARK: - Routable
+extension HomeViewModel: Routable {
+    static var routeIdentifier: String {
+        Route.home.identifier
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = HomeViewModel(coordinator: coordinator)
+        return AnyView(HomeView(viewModel: viewModel))
     }
 }
