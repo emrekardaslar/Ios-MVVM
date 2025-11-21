@@ -15,6 +15,7 @@
 
 import SwiftUI
 
+@MainActor
 class AppCoordinator: ObservableObject, Coordinator {
     // MARK: - Published Properties
     @Published var currentTab: Tab = .home
@@ -23,6 +24,7 @@ class AppCoordinator: ObservableObject, Coordinator {
     // MARK: - Private Properties
     private let container: DIContainer
     private var viewBuilders: [String: @MainActor (Route) -> AnyView] = [:]
+    private let urlRouter = URLRouter()
 
     // MARK: - Initialization
     init(container: DIContainer) {
@@ -48,21 +50,21 @@ class AppCoordinator: ObservableObject, Coordinator {
         paths[currentTab] = NavigationPath()
     }
 
-    // MARK: - Intent-Based Navigation
-    func showProduct(_ product: Product) {
-        navigate(to: .productDetail(product))
+    // MARK: - URL-Based Navigation
+    func navigate(to url: URL) {
+        guard let route = urlRouter.route(from: url) else {
+            print("⚠️ Could not parse URL: \(url)")
+            return
+        }
+        navigate(to: route)
     }
 
-    func showProducts() {
-        navigate(to: .productList)
-    }
-
-    func showOrders() {
-        navigate(to: .orders)
-    }
-
-    func showReviews() {
-        navigate(to: .reviews)
+    func navigate(to urlString: String) {
+        guard let url = URL(string: urlString) else {
+            print("⚠️ Invalid URL string: \(urlString)")
+            return
+        }
+        navigate(to: url)
     }
 
     // MARK: - Path Binding Helper

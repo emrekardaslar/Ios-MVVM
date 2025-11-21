@@ -24,15 +24,15 @@ class HomeViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func navigateToProducts() {
-        coordinator?.showProducts()
+        coordinator?.navigate(to: "https://myapp.com/products")
     }
 
     func navigateToOrders() {
-        coordinator?.showOrders()
+        coordinator?.navigate(to: "https://myapp.com/orders")
     }
 
     func navigateToReviews() {
-        coordinator?.showReviews()
+        coordinator?.navigate(to: "https://myapp.com/reviews")
     }
 }
 
