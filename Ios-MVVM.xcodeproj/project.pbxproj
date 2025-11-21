@@ -112,6 +112,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 409F91AA2ECF7DEA007C3E96 /* Build configuration list for PBXNativeTarget "Ios-MVVM" */;
 			buildPhases = (
+				4079794177AA8C4AFDAF3C96 /* Generate Routable Registry */,
 				409F917D2ECF7DE9007C3E96 /* Sources */,
 				409F917E2ECF7DE9007C3E96 /* Frameworks */,
 				409F917F2ECF7DE9007C3E96 /* Resources */,
@@ -244,6 +245,30 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		4079794177AA8C4AFDAF3C96 /* Generate Routable Registry */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Routable Registry";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Ios-MVVM/Presentation/Coordinator/RoutableRegistry.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Scripts/generate_routable_registry.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		409F917D2ECF7DE9007C3E96 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -285,6 +310,7 @@
 		409F91AB2ECF7DEA007C3E96 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
