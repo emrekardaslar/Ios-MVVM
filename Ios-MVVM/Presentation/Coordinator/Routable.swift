@@ -14,6 +14,7 @@ protocol Routable {
     static var routeConfig: RouteConfig { get }
 
     /// Creates a Route from extracted URL parameters
+    /// Used by URLRouter to construct routes from incoming URLs
     /// - Parameter parameters: Dictionary of parameter names to values extracted from URL
     /// - Returns: The constructed Route, or nil if parameters are invalid
     static func createRoute(from parameters: [String: String]) -> Route?

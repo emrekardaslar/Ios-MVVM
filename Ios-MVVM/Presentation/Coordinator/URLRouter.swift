@@ -22,33 +22,21 @@ class URLRouter {
 
     /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
-        // Find the ViewModel that handles this route
-        for viewModelType in routableTypes {
-            let params = viewModelType.extractParameters(from: route)
-
-            // Check if this ViewModel handles the route
-            var handles = false
-            if !params.isEmpty {
-                handles = true
-            } else if let createdRoute = viewModelType.createRoute(from: [:]),
-                      createdRoute.identifier == route.identifier {
-                handles = true
-            }
-
-            if handles {
-                let config = viewModelType.routeConfig
-                var path = config.path
-
-                // Replace path parameters with actual values from the route
-                for (key, value) in params {
-                    path = path.replacingOccurrences(of: ":\(key)", with: value)
-                }
-
-                return URL(string: "\(baseURL)\(path)")
-            }
+        // Use the auto-generated map to find the ViewModel for this route
+        guard let viewModelType = routableTypeMap[route.identifier] else {
+            return nil
         }
 
-        return nil
+        let config = viewModelType.routeConfig
+        var path = config.path
+
+        // Replace path parameters with actual values from the route
+        let params = viewModelType.extractParameters(from: route)
+        for (key, value) in params {
+            path = path.replacingOccurrences(of: ":\(key)", with: value)
+        }
+
+        return URL(string: "\(baseURL)\(path)")
     }
 
     // MARK: - URL to Route Mapping
@@ -72,9 +60,12 @@ class URLRouter {
     // MARK: - Private Parsing Methods
 
     private func parseCustomSchemeURL(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
-        let path = "/" + (url.host ?? "")
+        // For custom scheme URLs like myapp://products/1, host is "products" and path is "/1"
+        let host = url.host ?? ""
+        let urlPath = url.path
+        let fullPath = "/" + host + (urlPath.isEmpty || urlPath == "/" ? "" : urlPath)
         let tab = extractTabFromURL(url)
-        return matchPath(path, parameters: url.queryParameters, preferredTab: tab)
+        return matchPath(fullPath, parameters: url.queryParameters, preferredTab: tab)
     }
 
     private func parseUniversalLink(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {

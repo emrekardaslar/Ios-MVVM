@@ -120,6 +120,21 @@ done
 
 /bin/cat >> "${TYPES_OUTPUT}" << 'EOF'
 ]
+
+/// Maps route identifiers to their corresponding ViewModel types
+@MainActor
+let routableTypeMap: [String: any Routable.Type] = [
+EOF
+
+# Add mappings
+for i in "${!TYPE_NAMES[@]}"; do
+    TYPE="${TYPE_NAMES[$i]}"
+    ROUTE_ID="${TYPE_IDS[$i]}"
+    /bin/echo "    \"${ROUTE_ID}\": ${TYPE}.self," >> "${TYPES_OUTPUT}"
+done
+
+/bin/cat >> "${TYPES_OUTPUT}" << 'EOF'
+]
 EOF
 
 echo "✅ Generated RoutableTypes.swift with ${TYPE_COUNT} types"
