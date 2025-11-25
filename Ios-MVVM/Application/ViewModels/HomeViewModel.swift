@@ -45,7 +45,7 @@ extension HomeViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: .home,
+            tab: nil,
             path: "/home"
         )
     }

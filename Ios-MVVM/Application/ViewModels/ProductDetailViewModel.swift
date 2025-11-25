@@ -44,7 +44,7 @@ extension ProductDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: .products,
+            tab: nil,
             path: "/products/:id"
         )
     }

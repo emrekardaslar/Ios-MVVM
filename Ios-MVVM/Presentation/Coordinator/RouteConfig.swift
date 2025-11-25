@@ -9,11 +9,11 @@ import Foundation
 
 struct RouteConfig {
     let activity: Activity
-    let tab: Tab
+    let tab: Tab?
     let path: String
     let requiresAuth: Bool
 
-    init(activity: Activity, tab: Tab, path: String, requiresAuth: Bool = false) {
+    init(activity: Activity, tab: Tab? = nil, path: String, requiresAuth: Bool = false) {
         self.activity = activity
         self.tab = tab
         self.path = path

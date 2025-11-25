@@ -41,9 +41,9 @@ class URLRouter {
 
     // MARK: - URL to Route Mapping
 
-    /// Parses a URL and returns the corresponding Route with activity and tab info
+    /// Parses a URL and returns the corresponding Route with activity and optional tab info
     /// Dynamically matches against ViewModel-defined paths
-    func route(from url: URL) -> (activity: Activity, tab: Tab, route: Route)? {
+    func route(from url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         // Handle custom scheme (myapp://products)
         if url.scheme == customScheme {
             return parseCustomSchemeURL(url)
@@ -59,17 +59,17 @@ class URLRouter {
 
     // MARK: - Private Parsing Methods
 
-    private func parseCustomSchemeURL(_ url: URL) -> (activity: Activity, tab: Tab, route: Route)? {
+    private func parseCustomSchemeURL(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         let path = "/" + (url.host ?? "")
         return matchPath(path, parameters: url.queryParameters)
     }
 
-    private func parseUniversalLink(_ url: URL) -> (activity: Activity, tab: Tab, route: Route)? {
+    private func parseUniversalLink(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         let path = url.path.isEmpty ? "/" : url.path
         return matchPath(path, parameters: url.queryParameters)
     }
 
-    private func matchPath(_ urlPath: String, parameters: [String: String]) -> (activity: Activity, tab: Tab, route: Route)? {
+    private func matchPath(_ urlPath: String, parameters: [String: String]) -> (activity: Activity, tab: Tab?, route: Route)? {
         // Try to match against each ViewModel's path pattern
         for viewModelType in routableTypes {
             let config = viewModelType.routeConfig

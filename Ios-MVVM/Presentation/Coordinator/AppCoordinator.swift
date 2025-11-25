@@ -68,8 +68,8 @@ class AppCoordinator: ObservableObject, Coordinator {
             currentActivity = activity
         }
 
-        // Switch tab if different and belongs to current activity
-        if tab != currentTab && tab.activity == currentActivity {
+        // Switch tab only if specified and different and belongs to current activity
+        if let tab = tab, tab != currentTab && tab.activity == currentActivity {
             currentTab = tab
         }
 

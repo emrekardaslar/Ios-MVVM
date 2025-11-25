@@ -40,7 +40,7 @@ extension BrochuresViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .brochure,
-            tab: .brochures,
+            tab: nil,
             path: "/brochures"
         )
     }
