@@ -54,8 +54,17 @@ class ProductListViewModel: ObservableObject {
 
 // MARK: - Routable
 extension ProductListViewModel: Routable {
+    static var path: String { return "/products" }
     static var routeIdentifier: String {
         Route.productList.identifier
+    }
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        return .productList
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        return [:]
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

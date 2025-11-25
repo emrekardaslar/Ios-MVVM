@@ -2,7 +2,7 @@
 //  URLRouter.swift
 //  Ios-MVVM
 //
-//  Maps URLs to Routes for unified navigation
+//  Maps URLs to Routes using ViewModel-defined paths
 //  Supports both custom scheme (myapp://) and universal links (https://)
 //
 
@@ -20,24 +20,19 @@ class URLRouter {
 
     // MARK: - Route to URL Mapping
 
-    /// Converts a Route to a URL
-    /// Used for generating URLs from routes
+    /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
-        let path: String
+        // Find the ViewModel that handles this route
+        guard let viewModelType = routableTypes.first(where: { $0.routeIdentifier == route.identifier }) else {
+            return nil
+        }
 
-        switch route {
-        case .home:
-            path = "/home"
-        case .productList:
-            path = "/products"
-        case .productDetail(let product):
-            path = "/products/\(product.id)"
-        case .favorites:
-            path = "/favorites"
-        case .orders:
-            path = "/orders"
-        case .reviews:
-            path = "/reviews"
+        var path = viewModelType.path
+
+        // Replace path parameters with actual values from the route
+        let parameters = viewModelType.extractParameters(from: route)
+        for (key, value) in parameters {
+            path = path.replacingOccurrences(of: ":\(key)", with: value)
         }
 
         return URL(string: "\(baseURL)\(path)")
@@ -46,7 +41,7 @@ class URLRouter {
     // MARK: - URL to Route Mapping
 
     /// Parses a URL and returns the corresponding Route
-    /// Supports both custom scheme (myapp://) and universal links (https://myapp.com)
+    /// Dynamically matches against ViewModel-defined paths
     func route(from url: URL) -> Route? {
         // Handle custom scheme (myapp://products)
         if url.scheme == customScheme {
@@ -64,49 +59,53 @@ class URLRouter {
     // MARK: - Private Parsing Methods
 
     private func parseCustomSchemeURL(_ url: URL) -> Route? {
-        let path = url.host ?? ""
-        return parsePathComponents(path, parameters: url.queryParameters)
+        let path = "/" + (url.host ?? "")
+        return matchPath(path, parameters: url.queryParameters)
     }
 
     private func parseUniversalLink(_ url: URL) -> Route? {
-        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return parsePathComponents(path, parameters: url.queryParameters)
+        let path = url.path.isEmpty ? "/" : url.path
+        return matchPath(path, parameters: url.queryParameters)
     }
 
-    private func parsePathComponents(_ path: String, parameters: [String: String]) -> Route? {
-        let components = path.components(separatedBy: "/")
+    private func matchPath(_ urlPath: String, parameters: [String: String]) -> Route? {
+        // Try to match against each ViewModel's path pattern
+        for viewModelType in routableTypes {
+            let pathPattern = viewModelType.path
 
-        guard let firstComponent = components.first, !firstComponent.isEmpty else {
-            return .home
+            if let route = matchPathPattern(urlPath, against: pathPattern, viewModelType: viewModelType) {
+                return route
+            }
         }
 
-        switch firstComponent {
-        case "home":
-            return .home
+        return nil
+    }
 
-        case "products":
-            // /products/123 → product detail
-            if components.count > 1, let productId = Int(components[1]) {
-                // In a real app, fetch product from repository
-                // For now, use mock product with the ID
-                let mockProduct = Product.mockList.first { $0.id == productId } ?? Product.mock
-                return .productDetail(mockProduct)
-            }
-            // /products → product list
-            return .productList
+    private func matchPathPattern(_ urlPath: String, against pattern: String, viewModelType: any Routable.Type) -> Route? {
+        let urlComponents = urlPath.components(separatedBy: "/").filter { !$0.isEmpty }
+        let patternComponents = pattern.components(separatedBy: "/").filter { !$0.isEmpty }
 
-        case "favorites":
-            return .favorites
-
-        case "orders":
-            return .orders
-
-        case "reviews":
-            return .reviews
-
-        default:
+        // Must have same number of components
+        guard urlComponents.count == patternComponents.count else {
             return nil
         }
+
+        var extractedParams: [String: String] = [:]
+
+        // Match each component
+        for (urlComp, patternComp) in zip(urlComponents, patternComponents) {
+            if patternComp.hasPrefix(":") {
+                // This is a parameter - extract it
+                let paramName = String(patternComp.dropFirst())
+                extractedParams[paramName] = urlComp
+            } else if urlComp != patternComp {
+                // Literal doesn't match
+                return nil
+            }
+        }
+
+        // Pattern matched! Now let the ViewModel create the route from parameters
+        return viewModelType.createRoute(from: extractedParams)
     }
 }
 
