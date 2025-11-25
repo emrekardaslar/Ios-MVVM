@@ -43,9 +43,6 @@ class HomeViewModel: ObservableObject {
 // MARK: - Routable
 extension HomeViewModel: Routable {
     static var path: String { return "/home" }
-    static var routeIdentifier: String {
-        Route.home.identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .home
@@ -53,6 +50,11 @@ extension HomeViewModel: Routable {
 
     static func extractParameters(from route: Route) -> [String: String] {
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .home = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

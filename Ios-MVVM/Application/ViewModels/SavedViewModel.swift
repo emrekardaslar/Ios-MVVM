@@ -50,9 +50,6 @@ class SavedViewModel: ObservableObject {
 // MARK: - Routable
 extension SavedViewModel: Routable {
     static var path: String { return "/saved" }
-    static var routeIdentifier: String {
-        Route.saved.identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .saved
@@ -60,6 +57,11 @@ extension SavedViewModel: Routable {
 
     static func extractParameters(from route: Route) -> [String: String] {
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .saved = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

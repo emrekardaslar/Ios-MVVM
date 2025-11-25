@@ -23,7 +23,7 @@ class URLRouter {
     /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
         // Find the ViewModel that handles this route
-        guard let viewModelType = routableTypes.first(where: { $0.routeIdentifier == route.identifier }) else {
+        guard let viewModelType = routableTypes.first(where: { $0.canHandle(route: route) }) else {
             return nil
         }
 

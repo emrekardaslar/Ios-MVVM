@@ -70,9 +70,6 @@ class ReviewsViewModel: ObservableObject {
 // MARK: - Routable
 extension ReviewsViewModel: Routable {
     static var path: String { return "/reviews" }
-    static var routeIdentifier: String {
-        Route.reviews.identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .reviews
@@ -80,6 +77,11 @@ extension ReviewsViewModel: Routable {
 
     static func extractParameters(from route: Route) -> [String: String] {
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .reviews = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

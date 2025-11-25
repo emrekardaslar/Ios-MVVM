@@ -45,9 +45,6 @@ class FavoritesViewModel: ObservableObject {
 // MARK: - Routable
 extension FavoritesViewModel: Routable {
     static var path: String { return "/favorites" }
-    static var routeIdentifier: String {
-        Route.favorites.identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .favorites
@@ -55,6 +52,11 @@ extension FavoritesViewModel: Routable {
 
     static func extractParameters(from route: Route) -> [String: String] {
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .favorites = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

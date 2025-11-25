@@ -17,11 +17,6 @@ struct Ios_MVVMApp: App {
         let coordinator = AppCoordinator(container: container)
         container.setCoordinator(coordinator)
 
-        // Auto-register all routable views with the coordinator (must happen before StateObject creation)
-        MainActor.assumeIsolated {
-            RoutableRegistry.registerAll(with: coordinator)
-        }
-
         _coordinator = StateObject(wrappedValue: coordinator)
     }
 

@@ -44,9 +44,6 @@ class OrdersViewModel: ObservableObject {
 // MARK: - Routable
 extension OrdersViewModel: Routable {
     static var path: String { return "/orders" }
-    static var routeIdentifier: String {
-        Route.orders.identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .orders
@@ -54,6 +51,11 @@ extension OrdersViewModel: Routable {
 
     static func extractParameters(from route: Route) -> [String: String] {
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .orders = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

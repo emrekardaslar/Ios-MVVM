@@ -23,7 +23,6 @@ class AppCoordinator: ObservableObject, Coordinator {
 
     // MARK: - Private Properties
     private let container: DIContainer
-    private var viewBuilders: [String: @MainActor (Route) -> AnyView] = [:]
     private let urlRouter = URLRouter()
 
     // MARK: - Initialization
@@ -75,20 +74,15 @@ class AppCoordinator: ObservableObject, Coordinator {
         )
     }
 
-    // MARK: - Registration
-    @MainActor
-    func register<V: View>(identifier: String, @ViewBuilder builder: @escaping (Route) -> V) {
-        viewBuilders[identifier] = { route in AnyView(builder(route)) }
-    }
-
     // MARK: - View Builder
     @MainActor
     @ViewBuilder
     func build(route: Route) -> some View {
-        if let builder = viewBuilders[route.identifier] {
-            builder(route)
+        // Find the ViewModel that can handle this route
+        if let viewModelType = routableTypes.first(where: { $0.canHandle(route: route) }) {
+            viewModelType.createView(from: route, coordinator: self)
         } else {
-            Text("Route not registered: \(route.identifier)")
+            Text("No ViewModel found for route")
                 .foregroundColor(.red)
         }
     }

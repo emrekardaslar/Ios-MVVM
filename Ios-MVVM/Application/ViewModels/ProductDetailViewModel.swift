@@ -42,9 +42,6 @@ class ProductDetailViewModel: ObservableObject {
 // MARK: - Routable
 extension ProductDetailViewModel: Routable {
     static var path: String { return "/products/:id" }
-    static var routeIdentifier: String {
-        Route.productDetail(Product.mock).identifier
-    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         guard let idParam = parameters["id"], let productId = Int(idParam) else {
@@ -60,6 +57,11 @@ extension ProductDetailViewModel: Routable {
             return ["id": "\(product.id)"]
         }
         return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .productDetail = route { return true }
+        return false
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {

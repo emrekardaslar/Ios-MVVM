@@ -15,9 +15,6 @@ protocol Routable {
     /// Use :paramName for dynamic segments
     static var path: String { get }
 
-    /// The route identifier this view handles
-    static var routeIdentifier: String { get }
-
     /// Creates a Route from extracted URL parameters
     /// - Parameter parameters: Dictionary of parameter names to values extracted from URL
     /// - Returns: The constructed Route, or nil if parameters are invalid
@@ -27,6 +24,11 @@ protocol Routable {
     /// - Parameter route: The route to extract parameters from
     /// - Returns: Dictionary of parameter names to values, or empty if no parameters
     static func extractParameters(from route: Route) -> [String: String]
+
+    /// Checks if this ViewModel handles the given route
+    /// - Parameter route: The route to check
+    /// - Returns: true if this ViewModel can handle the route
+    static func canHandle(route: Route) -> Bool
 
     /// Creates the view for the given route
     /// - Parameters:
