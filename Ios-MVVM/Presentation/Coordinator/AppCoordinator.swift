@@ -95,15 +95,17 @@ class AppCoordinator: ObservableObject, Coordinator {
 
     // MARK: - View Builder
     @MainActor
-    @ViewBuilder
-    func build(route: Route) -> some View {
-        // Find the ViewModel that can handle this route
-        if let viewModelType = routableTypes.first(where: { $0.canHandle(route: route) }) {
-            viewModelType.createView(from: route, coordinator: self)
-        } else {
-            Text("No ViewModel found for route")
-                .foregroundColor(.red)
+    func build(route: Route) -> AnyView {
+        // Try to build view from each ViewModel's createRoute
+        // Match by checking if the ViewModel's createRoute with extracted params equals our route
+        for viewModelType in routableTypes {
+            let params = viewModelType.extractParameters(from: route)
+            if let constructedRoute = viewModelType.createRoute(from: params), constructedRoute == route {
+                return viewModelType.createView(from: route, coordinator: self)
+            }
         }
+
+        return AnyView(Text("No ViewModel found for route").foregroundColor(.red))
     }
 
     // MARK: - Dependency Access

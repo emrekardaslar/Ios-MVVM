@@ -58,10 +58,6 @@ extension HomeViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .home = route { return true }
-        return false
-    }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         let viewModel = HomeViewModel(coordinator: coordinator)

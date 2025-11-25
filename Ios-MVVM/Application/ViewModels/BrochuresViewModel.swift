@@ -53,10 +53,6 @@ extension BrochuresViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .brochures = route { return true }
-        return false
-    }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         let viewModel = BrochuresViewModel(coordinator: coordinator)

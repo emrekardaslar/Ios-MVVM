@@ -72,10 +72,6 @@ extension BrochureDetailViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .brochureDetail = route { return true }
-        return false
-    }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         if case .brochureDetail(let brochure) = route {

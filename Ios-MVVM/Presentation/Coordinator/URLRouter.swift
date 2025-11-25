@@ -22,21 +22,23 @@ class URLRouter {
 
     /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
-        // Find the ViewModel that handles this route
-        guard let viewModelType = routableTypes.first(where: { $0.canHandle(route: route) }) else {
-            return nil
+        // Find the ViewModel that handles this route by checking if it can reconstruct it
+        for viewModelType in routableTypes {
+            let params = viewModelType.extractParameters(from: route)
+            if let constructedRoute = viewModelType.createRoute(from: params), constructedRoute == route {
+                let config = viewModelType.routeConfig
+                var path = config.path
+
+                // Replace path parameters with actual values from the route
+                for (key, value) in params {
+                    path = path.replacingOccurrences(of: ":\(key)", with: value)
+                }
+
+                return URL(string: "\(baseURL)\(path)")
+            }
         }
 
-        let config = viewModelType.routeConfig
-        var path = config.path
-
-        // Replace path parameters with actual values from the route
-        let parameters = viewModelType.extractParameters(from: route)
-        for (key, value) in parameters {
-            path = path.replacingOccurrences(of: ":\(key)", with: value)
-        }
-
-        return URL(string: "\(baseURL)\(path)")
+        return nil
     }
 
     // MARK: - URL to Route Mapping

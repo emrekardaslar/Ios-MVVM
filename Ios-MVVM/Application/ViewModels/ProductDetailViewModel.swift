@@ -65,10 +65,6 @@ extension ProductDetailViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .productDetail = route { return true }
-        return false
-    }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         if case .productDetail(let product) = route {

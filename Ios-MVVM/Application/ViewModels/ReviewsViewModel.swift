@@ -85,10 +85,6 @@ extension ReviewsViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .reviews = route { return true }
-        return false
-    }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         let viewModel = ReviewsViewModel(coordinator: coordinator)

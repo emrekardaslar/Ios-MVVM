@@ -23,11 +23,6 @@ protocol Routable {
     /// - Returns: Dictionary of parameter names to values, or empty if no parameters
     static func extractParameters(from route: Route) -> [String: String]
 
-    /// Checks if this ViewModel handles the given route
-    /// - Parameter route: The route to check
-    /// - Returns: true if this ViewModel can handle the route
-    static func canHandle(route: Route) -> Bool
-
     /// Creates the view for the given route
     /// - Parameters:
     ///   - route: The route to build (may contain associated values)
