@@ -44,7 +44,13 @@ class FavoritesViewModel: ObservableObject {
 
 // MARK: - Routable
 extension FavoritesViewModel: Routable {
-    static var path: String { return "/favorites" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .favorites,
+            path: "/favorites"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .favorites

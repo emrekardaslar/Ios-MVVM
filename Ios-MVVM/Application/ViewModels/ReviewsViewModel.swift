@@ -69,7 +69,13 @@ class ReviewsViewModel: ObservableObject {
 
 // MARK: - Routable
 extension ReviewsViewModel: Routable {
-    static var path: String { return "/reviews" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .home,
+            path: "/reviews"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .reviews

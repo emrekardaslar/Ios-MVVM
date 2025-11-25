@@ -42,7 +42,13 @@ class HomeViewModel: ObservableObject {
 
 // MARK: - Routable
 extension HomeViewModel: Routable {
-    static var path: String { return "/home" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .home,
+            path: "/home"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .home

@@ -12,11 +12,17 @@ struct TabBarView: View {
 
     var body: some View {
         TabView(selection: $coordinator.currentTab) {
-            ForEach(Tab.allCases, id: \.self) { tab in
+            // Tabs for current activity
+            ForEach(Tab.tabs(for: coordinator.currentActivity), id: \.self) { tab in
                 NavigationStack(path: coordinator.binding(for: tab)) {
                     coordinator.build(route: tab.rootRoute)
                         .navigationDestination(for: Route.self) { route in
                             coordinator.build(route: route)
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                ActivitySwitcherView(coordinator: coordinator)
+                            }
                         }
                 }
                 .tabItem {

@@ -10,10 +10,8 @@ import SwiftUI
 
 @MainActor
 protocol Routable {
-    /// The URL path pattern for this route
-    /// Examples: "/home", "/products", "/products/:id"
-    /// Use :paramName for dynamic segments
-    static var path: String { get }
+    /// Route configuration including activity, tab, path, and auth requirements
+    static var routeConfig: RouteConfig { get }
 
     /// Creates a Route from extracted URL parameters
     /// - Parameter parameters: Dictionary of parameter names to values extracted from URL

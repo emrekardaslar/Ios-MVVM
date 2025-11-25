@@ -43,7 +43,13 @@ class OrdersViewModel: ObservableObject {
 
 // MARK: - Routable
 extension OrdersViewModel: Routable {
-    static var path: String { return "/orders" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .home,
+            path: "/orders"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .orders

@@ -41,7 +41,13 @@ class ProductDetailViewModel: ObservableObject {
 
 // MARK: - Routable
 extension ProductDetailViewModel: Routable {
-    static var path: String { return "/products/:id" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .products,
+            path: "/products/:id"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         guard let idParam = parameters["id"], let productId = Int(idParam) else {

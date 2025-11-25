@@ -26,8 +26,8 @@ while IFS= read -r file; do
         # Extract type name
         TYPE_NAME=$(/usr/bin/grep "extension.*:.*Routable" "$file" | /usr/bin/sed -E 's/.*extension[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*:[[:space:]]*Routable.*/\1/')
 
-        # Extract path
-        PATH_LINE=$(/usr/bin/grep 'static var path:' "$file" | /usr/bin/head -1)
+        # Extract path from routeConfig
+        PATH_LINE=$(/usr/bin/grep 'path:' "$file" | /usr/bin/head -1)
         if [[ $PATH_LINE =~ \"([^\"]+)\" ]]; then
             PATH="${BASH_REMATCH[1]}"
         else

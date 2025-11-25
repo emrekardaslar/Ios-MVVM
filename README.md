@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project demonstrates a scalable iOS application architecture using MVVM (Model-View-ViewModel) pattern with Coordinator-based navigation, Repository pattern, and Dependency Injection.
+This project demonstrates a scalable iOS application architecture using MVVM (Model-View-ViewModel) pattern with Activity-based multi-app support, URL-driven navigation, auto-generated routing, and Dependency Injection.
 
 **Tech Stack:**
 - SwiftUI
@@ -11,9 +11,11 @@ This project demonstrates a scalable iOS application architecture using MVVM (Mo
 
 **Core Patterns:**
 - MVVM (Model-View-ViewModel)
-- Coordinator Pattern (Navigation)
+- Activity Pattern (Multi-app support)
+- URL-Based Navigation with Coordinator
 - Repository Pattern (Data Layer)
 - Dependency Injection (Loose Coupling)
+- Auto-Generated Routing (Build-time code generation)
 
 ---
 
@@ -35,30 +37,39 @@ Ios-MVVM/
 │   │   ├── ProductListViewModel.swift
 │   │   ├── ProductDetailViewModel.swift
 │   │   ├── FavoritesViewModel.swift
+│   │   ├── SavedViewModel.swift
 │   │   ├── OrdersViewModel.swift
-│   │   └── ReviewsViewModel.swift
+│   │   ├── ReviewsViewModel.swift
+│   │   └── BrochuresViewModel.swift
 │   └── Models/
 │       ├── Product.swift
 │       └── Order.swift
 ├── Presentation/
 │   ├── Views/
 │   │   ├── TabBarView.swift
+│   │   ├── ActivitySwitcherView.swift
 │   │   ├── HomeView.swift
 │   │   ├── ProductListView.swift
 │   │   ├── ProductDetailView.swift
 │   │   ├── FavoritesView.swift
+│   │   ├── SavedView.swift
 │   │   ├── OrdersView.swift
-│   │   └── ReviewsView.swift
+│   │   ├── ReviewsView.swift
+│   │   └── BrochuresView.swift
 │   └── Coordinator/
 │       ├── Coordinator.swift
 │       ├── AppCoordinator.swift
-│       ├── Route.swift
+│       ├── Activity.swift
+│       ├── RouteConfig.swift
+│       ├── Route.swift (auto-generated)
 │       ├── Tab.swift
 │       ├── Routable.swift
-│       ├── RoutableRegistry.swift
+│       ├── URLRouter.swift
 │       └── RoutableTypes.swift (auto-generated)
 ├── DI/
 │   └── DIContainer.swift
+├── Scripts/
+│   └── generate_routable_files.sh
 └── App/
     └── Ios_MVVMApp.swift
 ```
@@ -92,7 +103,7 @@ Ios-MVVM/
   - Contains business logic
   - Manages UI state using `@Published` properties
   - Communicates with repositories for data
-  - Delegates navigation to Coordinator
+  - Uses URL-based navigation
   - No direct UIKit/SwiftUI dependencies (testable)
 
 - **Models**:
@@ -118,245 +129,418 @@ Ios-MVVM/
   - No business logic
 
 - **Coordinator**:
-  - Manages navigation flow
-  - Holds NavigationPath (SwiftUI)
+  - Manages navigation flow and activities
+  - Holds NavigationPath per tab (SwiftUI)
   - Creates Views with their ViewModels
-  - Handles deep linking and routing
+  - Handles deep linking, URLs, and routing
+  - Manages activity switching
 
 **Responsibilities:**
 - UI rendering
 - User interaction handling
 - Screen navigation
+- Activity management
 
 ---
 
-## Navigation: Coordinator Pattern
+## Activity System: Multi-App Architecture
 
-### Why Coordinator?
-- Decouples navigation logic from ViewModels
-- ViewModels remain testable (no navigation dependencies)
-- Centralized routing makes deep linking easier
-- Reusable navigation flows
-- Intent-based API provides semantic navigation methods
+### What is an Activity?
 
-### Implementation Approach
+An **Activity** represents a complete app context within your application. Think of it as having multiple mini-apps in one:
 
-**1. Route Definition (Enum-based with Auto-Generated Identifiers)**
 ```swift
+enum Activity: String, CaseIterable {
+    case ecommerce  // Shopping app context
+    case brochure   // Catalog/Marketing app context
+}
+```
+
+### Why Activities?
+
+**Use Cases:**
+- **Multi-app in one**: B2C shopping + B2B wholesale + Admin portal
+- **Context switching**: Buyer mode vs Seller mode vs Agent mode
+- **Feature isolation**: Personal banking + Business banking + Investments
+
+**Benefits:**
+- Clean separation of concerns
+- Independent tab sets per activity
+- Preserved navigation state when switching
+- Shared infrastructure (auth, payments, data)
+
+### Activity Structure
+
+Each activity has:
+- **Display name**: User-facing label
+- **Icon**: Visual identifier
+- **Default tab**: Initial tab when switching to activity
+- **Tab set**: Tabs that belong to this activity
+
+```
+E-Commerce Activity          Brochure Activity
+┌─────────────────┐         ┌─────────────────┐
+│ [Home] tab      │         │ [Brochures] tab │
+│ [Products] tab  │         └─────────────────┘
+│ [Favorites] tab │
+└─────────────────┘
+```
+
+### Switching Activities
+
+**Manual**: User taps "Apps" button in navigation bar
+- Shows menu with all activities
+- Current activity marked with checkmark
+- Switches activity and resets to default tab
+
+**Automatic**: Via URL navigation
+- Deep link includes activity information
+- AppCoordinator automatically switches if needed
+- Navigation state preserved across switches
+
+---
+
+## URL-Based Navigation
+
+### Core Concept
+
+**Everything navigates using web URLs**. Whether it's:
+- User tapping a button
+- Deep link from notification
+- Universal link from web
+- App link from another app
+
+All use the same API: `coordinator.navigate(to: URL)`
+
+### RouteConfig
+
+ViewModels declare their routing configuration:
+
+```swift
+struct RouteConfig {
+    let activity: Activity     // Which activity this belongs to
+    let tab: Tab              // Which tab to navigate to
+    let path: String          // URL path pattern
+    let requiresAuth: Bool    // Authentication requirement
+}
+```
+
+### ViewModel Example
+
+```swift
+extension ProductDetailViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .products,
+            path: "/products/:id",
+            requiresAuth: false
+        )
+    }
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        guard let id = parameters["id"], let productId = Int(id) else {
+            return nil
+        }
+        let product = Product.mockList.first { $0.id == productId } ?? Product.mock
+        return .productDetail(product)
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        if case .productDetail(let product) = route {
+            return ["id": "\(product.id)"]
+        }
+        return [:]
+    }
+
+    static func canHandle(route: Route) -> Bool {
+        if case .productDetail = route { return true }
+        return false
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        if case .productDetail(let product) = route {
+            let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+            return AnyView(ProductDetailView(viewModel: viewModel))
+        }
+        return AnyView(Text("Invalid route"))
+    }
+}
+```
+
+### Navigation Flow
+
+```
+1. User Action / External Trigger
+   ↓
+   coordinator.navigate(to: "https://myapp.com/products/123")
+   ↓
+2. URLRouter.route(from: URL)
+   - Matches path pattern: "/products/:id"
+   - Extracts parameters: id = "123"
+   - Finds ViewModel: ProductDetailViewModel
+   - Gets RouteConfig
+   ↓
+   Returns: (activity: .ecommerce, tab: .products, route: .productDetail(Product))
+   ↓
+3. AppCoordinator
+   - Switch activity if different
+   - Switch tab if different
+   - Navigate to route
+   ↓
+4. View Displayed
+```
+
+### URL Pattern Matching
+
+Supports dynamic parameters:
+- `/home` → Exact match
+- `/products/:id` → Matches `/products/123`, extracts `id=123`
+- `/users/:userId/orders/:orderId` → Multiple parameters
+
+---
+
+## Auto-Generated Routing
+
+### Build-Time Code Generation
+
+A shell script (`Scripts/generate_routable_files.sh`) runs before compilation:
+
+**What it does:**
+1. Scans all `*ViewModel.swift` files
+2. Finds extensions conforming to `Routable`
+3. Extracts `routeConfig.path` from each
+4. Generates two files:
+   - `Route.swift` - Enum with all route cases
+   - `RoutableTypes.swift` - Array of all ViewModel types
+
+**Example Output:**
+
+```swift
+// Route.swift (auto-generated)
 enum Route: Hashable {
     case home
     case productList
     case productDetail(Product)
     case favorites
+    case saved
     case orders
     case reviews
+    case brochures
 
-    // Auto-generates identifier using Mirror reflection
-    // Associated values map to same identifier (e.g., all productDetail routes → "productDetail")
     var identifier: String {
         Mirror(reflecting: self).children.first?.label ?? String(describing: self)
     }
 }
-```
 
-**2. Tab Definition**
-```swift
-enum Tab: String, CaseIterable {
-    case home
-    case products
-    case favorites
-
-    var rootRoute: Route {
-        switch self {
-        case .home: return .home
-        case .products: return .productList
-        case .favorites: return .favorites
-        }
-    }
-}
-```
-
-**3. Coordinator Protocol (Intent-Based Navigation)**
-```swift
-protocol Coordinator: AnyObject {
-    // Basic Navigation
-    func pop()
-    func popToRoot()
-
-    // Intent-Based Navigation
-    func showProduct(_ product: Product)
-    func showProducts()
-    func showOrders()
-    func showReviews()
-}
-```
-
-**4. AppCoordinator (Implementation)**
-- Holds `NavigationPath` per tab (dictionary-based) for independent tab navigation
-- Implements intent methods that map to routes internally
-- Uses registration pattern for view creation (no switch statements!)
-- ViewModels receive coordinator reference
-
-**5. Routable Protocol (Self-Registering ViewModels)**
-Each ViewModel declares how to build itself:
-```swift
-@MainActor
-protocol Routable {
-    static var routeIdentifier: String { get }
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView
-}
-
-// Each ViewModel implements Routable
-extension HomeViewModel: Routable {
-    static var routeIdentifier: String {
-        Route.home.identifier
-    }
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        let viewModel = HomeViewModel(coordinator: coordinator)
-        return AnyView(HomeView(viewModel: viewModel))
-    }
-}
-```
-
-**6. Automatic Registration (Build-Time Script)**
-A build script automatically scans for Routable types and generates:
-```swift
-// RoutableTypes.swift (auto-generated, in .gitignore)
+// RoutableTypes.swift (auto-generated)
 let routableTypes: [any Routable.Type] = [
     HomeViewModel.self,
     ProductListViewModel.self,
     ProductDetailViewModel.self,
-    // ... automatically added by build script
+    FavoritesViewModel.self,
+    SavedViewModel.self,
+    OrdersViewModel.self,
+    ReviewsViewModel.self,
+    BrochuresViewModel.self
 ]
 ```
 
-**7. RoutableRegistry (Uses Generated Array)**
-```swift
-class RoutableRegistry {
-    static func registerAll(with coordinator: AppCoordinator) {
-        routableTypes.forEach { routableType in
-            coordinator.register(identifier: routableType.routeIdentifier) { route in
-                routableType.createView(from: route, coordinator: coordinator)
-            }
-        }
-    }
-}
-```
-
 **Benefits:**
-- **Zero manual registration**: Build script handles everything
-- **Compile-time errors**: Missing script = build failure
-- **Co-located logic**: View building lives with each ViewModel
-- **Clean git history**: Generated file in .gitignore
+- Zero manual maintenance
+- Compile-time safety
+- Clean git diffs (files in `.gitignore`)
+- No switch statements needed
 
-**How to Add a New Route (Example: Settings):**
-1. Add case to Route enum: `case settings`
-2. Add intent method to Coordinator protocol: `func showSettings()`
-3. Implement in AppCoordinator: `func showSettings() { navigate(to: .settings) }`
-4. Create SettingsViewModel with Routable extension
-5. **Build** → Automatically added to RoutableTypes.swift!
+### Adding a New Route
 
-That's it! No manual array maintenance needed.
+**Example: Add Product Reviews**
 
-**8. ViewModel → Coordinator Communication (Intent-Based)**
-ViewModels express intent, not routes:
+1. Create `ProductReviewsViewModel.swift`:
 ```swift
-class ProductListViewModel: ObservableObject {
-    private weak var coordinator: Coordinator?
+extension ProductReviewsViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .products,
+            path: "/products/:id/reviews"
+        )
+    }
+    // ... implement other protocol methods
+}
+```
 
-    func didSelectProduct(_ product: Product) {
-        coordinator?.showProduct(product) // Intent, not route!
+2. **Build project** → Route automatically generated!
+
+3. Use anywhere:
+```swift
+coordinator.navigate(to: "https://myapp.com/products/123/reviews")
+```
+
+**That's it!** No URLRouter changes, no manual registration, no enum updates.
+
+---
+
+## Coordinator Pattern
+
+### AppCoordinator
+
+Manages navigation for all activities:
+
+```swift
+@MainActor
+class AppCoordinator: ObservableObject, Coordinator {
+    @Published var currentActivity: Activity = .ecommerce
+    @Published var currentTab: Tab = .home
+    @Published private(set) var paths: [Tab: NavigationPath] = [:]
+
+    // Navigate via URL
+    func navigate(to url: URL) {
+        guard let (activity, tab, route) = urlRouter.route(from: url) else {
+            return
+        }
+
+        // Switch activity if different
+        if activity != currentActivity {
+            currentActivity = activity
+        }
+
+        // Switch tab if different
+        if tab != currentTab && tab.activity == currentActivity {
+            currentTab = tab
+        }
+
+        // Navigate to route
+        navigate(to: route)
+    }
+
+    // Switch activity manually
+    func switchActivity(to activity: Activity) {
+        currentActivity = activity
+        currentTab = activity.defaultTab
     }
 }
 ```
 
-**Why Intent-Based?**
-- ViewModels don't know about routes (better separation)
-- Coordinator decides routing logic
-- More semantic and readable
-- Easier to modify routing without touching ViewModels
+**Key Features:**
+- Manages current activity and tab
+- Handles URL-based navigation
+- Preserves navigation stacks per tab
+- Automatic activity/tab switching
+- Builds views dynamically via Routable types
+
+### URLRouter
+
+Parses URLs and maps to routes:
+
+```swift
+class URLRouter {
+    func route(from url: URL) -> (activity: Activity, tab: Tab, route: Route)? {
+        // Extract path from URL
+        // Match against ViewModel path patterns
+        // Extract parameters
+        // Return activity, tab, and route
+    }
+
+    func url(for route: Route) -> URL? {
+        // Reverse: Convert route to URL
+        // Find ViewModel, get path, replace parameters
+    }
+}
+```
 
 ---
 
 ## Dependency Injection
 
 ### DIContainer
-A simple container that holds and provides dependencies:
 
-**What it holds:**
-- NetworkService (singleton)
-- Repositories (singleton)
-- Coordinator (singleton)
+Simple container for managing dependencies:
 
-**How it works:**
-1. Container initialized at app startup
-2. Coordinator gets injected with container
-3. Coordinator creates ViewModels and injects their dependencies
-4. ViewModels receive: repository + coordinator
+```swift
+class DIContainer {
+    static let shared = DIContainer()
 
-**Benefits:**
-- Loose coupling
-- Easy testing (swap real implementations with mocks)
-- Single source of truth for dependencies
-- No external framework needed
+    private(set) lazy var networkService = NetworkService()
+    private(set) lazy var productRepository: ProductRepositoryProtocol =
+        ProductRepository(networkService: networkService)
+
+    private weak var coordinator: AppCoordinator?
+
+    func setCoordinator(_ coordinator: AppCoordinator) {
+        self.coordinator = coordinator
+    }
+}
+```
+
+**Initialization Flow:**
+1. App launches → Create DIContainer
+2. Create AppCoordinator with container
+3. ViewModels receive dependencies via coordinator
 
 ---
 
-## Data Flow
+## Data Flow Examples
 
-### Example: Loading Product List
+### Example 1: Loading Products
 
 ```
-1. User opens app
-   └─> ProductListView appears
-
-2. View initializes ViewModel
-   └─> ViewModel.loadProducts() called
-
-3. ViewModel calls Repository
-   └─> ProductRepository.fetchProducts()
-
-4. Repository calls NetworkService
-   └─> NetworkService.request<[Product]>(endpoint: "/products")
-
-5. Network response flows back
-   └─> NetworkService returns [ProductDTO]
-   └─> Repository transforms to [Product]
-   └─> ViewModel updates @Published property
-   └─> View automatically updates (SwiftUI)
+1. User opens Products tab
+   ↓
+2. ProductListView appears
+   ↓
+3. ViewModel.loadProducts() called
+   ↓
+4. Repository.fetchProducts()
+   ↓
+5. NetworkService makes API call
+   ↓
+6. Data flows back: Network → Repository → ViewModel
+   ↓
+7. ViewModel updates @Published property
+   ↓
+8. SwiftUI automatically updates view
 ```
 
-### Example: Navigation (Intent-Based)
+### Example 2: URL Navigation
 
 ```
 1. User taps product
-   └─> View calls ViewModel.didSelectProduct(product)
-
-2. ViewModel expresses intent to Coordinator
-   └─> coordinator.showProduct(product)
-
-3. Coordinator maps intent to route
-   └─> navigate(to: .productDetail(product)) [private method]
-   └─> Updates current tab's NavigationPath
-
-4. SwiftUI NavigationStack triggers navigationDestination
-   └─> Coordinator.build(route) called
-
-5. Coordinator looks up registered view builder
-   └─> Routable type's createView() method called
-   └─> Injects ProductDetailViewModel with product + dependencies
-   └─> View appears
+   ↓
+2. ViewModel calls: coordinator.navigate(to: "https://myapp.com/products/123")
+   ↓
+3. URLRouter parses URL:
+   - Path: /products/123
+   - Matches: ProductDetailViewModel
+   - Extracts: id = 123
+   - Returns: (ecommerce, products, .productDetail(Product))
+   ↓
+4. AppCoordinator:
+   - Activity already ecommerce ✓
+   - Tab already products ✓
+   - Push ProductDetailView
+   ↓
+5. ProductDetailView appears with product data
 ```
 
-### Multi-Tab Navigation
+### Example 3: Activity Switch via URL
 
-Each tab maintains its own NavigationPath:
-```swift
-@Published private(set) var paths: [Tab: NavigationPath] = [:]
-
-// Tab switching preserves navigation state
-// Example: Products tab can have ProductDetail stack while Home tab is at root
+```
+1. User receives notification: "https://myapp.com/brochures"
+2. Currently on: E-commerce Home tab
+   ↓
+3. URLRouter returns: (brochure, brochures, .brochures)
+   ↓
+4. AppCoordinator:
+   - Activity ecommerce ≠ brochure → Switch activity
+   - Tab home ≠ brochures → Switch tab
+   - Navigate to .brochures
+   ↓
+5. UI updates:
+   - Shows Brochure activity
+   - Shows Brochures tab
+   - BrochuresView displayed
+   - E-commerce state preserved
 ```
 
 ---
@@ -364,108 +548,140 @@ Each tab maintains its own NavigationPath:
 ## Testing Strategy
 
 ### ViewModel Tests
-- Mock the repository (protocol-based)
-- Mock the coordinator
-- Test business logic in isolation
-- Verify navigation calls
+```swift
+func testProductSelection() {
+    let mockCoordinator = MockCoordinator()
+    let mockRepository = MockProductRepository()
+    let viewModel = ProductListViewModel(
+        productRepository: mockRepository,
+        coordinator: mockCoordinator
+    )
+
+    viewModel.didSelectProduct(Product.mock)
+
+    XCTAssertTrue(mockCoordinator.navigatedToProduct)
+}
+```
 
 ### Repository Tests
-- Mock the NetworkService
-- Test data transformation
-- Test error handling
+```swift
+func testFetchProducts() async throws {
+    let mockNetworkService = MockNetworkService()
+    let repository = ProductRepository(networkService: mockNetworkService)
 
-### Integration Tests
-- Test full flow with real dependencies
-- Verify data propagation
+    let products = try await repository.fetchProducts()
+
+    XCTAssertEqual(products.count, 5)
+}
+```
+
+### URL Routing Tests
+```swift
+func testURLParsing() {
+    let router = URLRouter()
+    let url = URL(string: "https://myapp.com/products/123")!
+
+    let result = router.route(from: url)
+
+    XCTAssertEqual(result?.activity, .ecommerce)
+    XCTAssertEqual(result?.tab, .products)
+}
+```
 
 ---
 
 ## Key Principles
 
-1. **Separation of Concerns**: Each layer has a single responsibility
-2. **Dependency Inversion**: Depend on abstractions (protocols), not concretions
-3. **Testability**: All components can be tested in isolation
-4. **Scalability**: Easy to add new features without modifying existing code
-5. **Simplicity**: No over-engineering, just enough architecture for growth
+1. **URL-Driven Navigation**: Single API for all navigation sources
+2. **ViewModel-Driven Routing**: ViewModels define their own routes
+3. **Activity Isolation**: Clean separation of app contexts
+4. **Auto-Generation**: Build-time code generation eliminates boilerplate
+5. **Separation of Concerns**: Each layer has a single responsibility
+6. **Dependency Inversion**: Depend on abstractions (protocols)
+7. **Testability**: All components can be tested in isolation
+8. **Scalability**: Easy to add new features/activities/routes
 
 ---
 
-## Example Use Case: Multi-Tab App with Navigation
+## Current Implementation
 
-**Screens:**
-1. **Home Tab**: Welcome screen with quick actions and stats
-   - Navigate to Orders
-   - Navigate to Reviews
-2. **Products Tab**: List of products with search/filter
-   - Navigate to Product Detail
-3. **Favorites Tab**: Saved products
-   - Navigate to Product Detail
+### Activities
+- **E-commerce**: Home, Products, Favorites tabs
+- **Brochure**: Brochures tab
 
-**Flow:**
-1. App launches → DIContainer created
-2. Build script generates RoutableTypes.swift with all ViewModels
-3. AppCoordinator initialized with TabBar and NavigationStacks
-4. RoutableRegistry.registerAll() auto-registers all routes
-5. TabBarView shown with three tabs
-6. Each tab has independent navigation state
-7. User navigates within tabs → Coordinator manages stack per tab
-8. Tab switching preserves navigation history
+### Routes (8 total)
+- Home (`/home`)
+- Product List (`/products`)
+- Product Detail (`/products/:id`)
+- Favorites (`/favorites`)
+- Saved (`/saved`)
+- Orders (`/orders`)
+- Reviews (`/reviews`)
+- Brochures (`/brochures`)
 
-**Data Source:**
-- Mock API or real REST API (configurable)
-- Products fetched via ProductRepository
-- NetworkService handles HTTP
+### Features
+- ✅ URL-based navigation
+- ✅ Activity switching (manual + automatic)
+- ✅ Deep linking support
+- ✅ Auto-generated routing
+- ✅ Multi-tab navigation
+- ✅ State preservation
+- ✅ Pattern matching with parameters
+- ✅ Activity switcher UI component
 
 ---
 
-## Build Script & Auto-Generation
+## Build Configuration
 
-### How It Works
-A shell script (`Scripts/generate_routable_registry.sh`) runs before compilation:
-1. Scans all Swift files for `extension X: Routable`
-2. Extracts ViewModel type names
-3. Generates `RoutableTypes.swift` with array of all types
-4. File is in `.gitignore` (not tracked in git)
+### Xcode Build Phase
+**Name**: "Generate Routable Files"
+**Script**: `bash "${SRCROOT}/Scripts/generate_routable_files.sh"`
+**Runs**: Before "Compile Sources"
+**Output Files**:
+- `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/Route.swift`
+- `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift`
 
-### Build Configuration
-- **Xcode Build Phase**: "Generate Routable Registry" runs before "Compile Sources"
-- **Sandbox Disabled**: `ENABLE_USER_SCRIPT_SANDBOXING = NO` (required for script access)
-- **Output**: `Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift`
-
-### Benefits
-- **No manual maintenance**: Add ViewModel → Build → Auto-registered
-- **Compile-time safety**: Missing script = build fails with clear error
-- **Clean git diffs**: Generated file excluded from version control
+### Requirements
+- `ENABLE_USER_SCRIPT_SANDBOXING = NO` (required for file system access)
+- Both output files in `.gitignore`
 
 ---
 
 ## Future Enhancements
 
-This template can be extended with:
-- Deep linking support (URL → Route mapping)
-- Authentication flow (separate AuthCoordinator)
-- Local persistence (CoreData/Realm)
-- Caching layer in repositories
-- Analytics integration
-- Error handling UI
-- Loading states
-- Pull-to-refresh
-- Search and filtering
+Potential extensions:
+- **Authentication**: Auth flow with saved deep links
+- **Analytics**: Track navigation events
+- **Error Handling**: Unified error presentation
+- **Caching**: Route-based data caching
+- **Animations**: Custom transitions per route
+- **Query Parameters**: Support for URL query strings
+- **Activity History**: Back button across activities
+- **Dynamic Activities**: Load activities from server config
+
+---
+
+## When to Use This Architecture
+
+**Best for:**
+- Medium to large apps
+- Apps with multiple contexts/modes
+- Apps requiring deep linking
+- Multi-tenant applications
+- Apps with complex navigation
+- Team projects
+- Long-term maintained projects
+
+**Overkill for:**
+- Simple 2-3 screen apps
+- Quick prototypes
+- Proof of concepts
+- Single-purpose utilities
 
 ---
 
 ## Conclusion
 
-This architecture provides a solid foundation for iOS apps that need to scale. While it might seem complex for a 2-screen app, it demonstrates industry best practices and makes future growth painless.
+This architecture provides a production-ready foundation for scalable iOS apps. The combination of Activities, URL-based navigation, and auto-generated routing creates a flexible system that grows with your app's complexity while remaining maintainable and testable.
 
-**When to use this:**
-- Medium to large apps
-- Apps with complex navigation
-- Apps requiring high testability
-- Team projects with multiple developers
-- Long-term maintained projects
-
-**When to simplify:**
-- Quick prototypes
-- Single-screen apps
-- Proof of concepts
+**Key Innovation**: ViewModels define their own routing, and the system automatically discovers and registers them at build time. Adding new features is as simple as creating a new ViewModel with a RouteConfig—everything else is handled automatically.

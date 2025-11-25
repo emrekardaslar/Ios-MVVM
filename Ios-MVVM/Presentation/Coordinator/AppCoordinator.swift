@@ -18,6 +18,7 @@ import SwiftUI
 @MainActor
 class AppCoordinator: ObservableObject, Coordinator {
     // MARK: - Published Properties
+    @Published var currentActivity: Activity = .ecommerce
     @Published var currentTab: Tab = .home
     @Published private(set) var paths: [Tab: NavigationPath] = [:]
 
@@ -49,12 +50,30 @@ class AppCoordinator: ObservableObject, Coordinator {
         paths[currentTab] = NavigationPath()
     }
 
+    // MARK: - Activity Management
+    func switchActivity(to activity: Activity) {
+        currentActivity = activity
+        currentTab = activity.defaultTab
+    }
+
     // MARK: - URL-Based Navigation
     func navigate(to url: URL) {
-        guard let route = urlRouter.route(from: url) else {
+        guard let (activity, tab, route) = urlRouter.route(from: url) else {
             print("⚠️ Could not parse URL: \(url)")
             return
         }
+
+        // Switch activity if different
+        if activity != currentActivity {
+            currentActivity = activity
+        }
+
+        // Switch tab if different and belongs to current activity
+        if tab != currentTab && tab.activity == currentActivity {
+            currentTab = tab
+        }
+
+        // Navigate to route
         navigate(to: route)
     }
 

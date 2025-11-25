@@ -54,7 +54,13 @@ class ProductListViewModel: ObservableObject {
 
 // MARK: - Routable
 extension ProductListViewModel: Routable {
-    static var path: String { return "/products" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .products,
+            path: "/products"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .productList

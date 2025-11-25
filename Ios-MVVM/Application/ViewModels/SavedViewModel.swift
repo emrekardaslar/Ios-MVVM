@@ -49,7 +49,13 @@ class SavedViewModel: ObservableObject {
 
 // MARK: - Routable
 extension SavedViewModel: Routable {
-    static var path: String { return "/saved" }
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: .home,
+            path: "/saved"
+        )
+    }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
         return .saved
