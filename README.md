@@ -219,7 +219,7 @@ ViewModels declare their routing configuration:
 ```swift
 struct RouteConfig {
     let activity: Activity     // Which activity this belongs to
-    let tab: Tab              // Which tab to navigate to
+    let tab: Tab?             // Optional: which tab to navigate to (nil = stay on current tab)
     let path: String          // URL path pattern
     let requiresAuth: Bool    // Authentication requirement
 }
@@ -232,9 +232,8 @@ extension ProductDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: .products,
-            path: "/products/:id",
-            requiresAuth: false
+            tab: nil,  // No specific tab - opens in current tab
+            path: "/products/:id"
         )
     }
 
@@ -242,6 +241,7 @@ extension ProductDetailViewModel: Routable {
         guard let id = parameters["id"], let productId = Int(id) else {
             return nil
         }
+        // Fetch product from repository or mock data
         let product = Product.mockList.first { $0.id == productId } ?? Product.mock
         return .productDetail(product)
     }
@@ -253,17 +253,12 @@ extension ProductDetailViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .productDetail = route { return true }
-        return false
-    }
-
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         if case .productDetail(let product) = route {
             let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
             return AnyView(ProductDetailView(viewModel: viewModel))
         }
-        return AnyView(Text("Invalid route"))
+        return AnyView(Text("Invalid route for ProductDetail").foregroundColor(.red))
     }
 }
 ```
@@ -273,20 +268,22 @@ extension ProductDetailViewModel: Routable {
 ```
 1. User Action / External Trigger
    ↓
-   coordinator.navigate(to: "https://myapp.com/products/123")
+   coordinator.navigate(to: "https://myapp.com/products/123?tab=products")
    ↓
 2. URLRouter.route(from: URL)
+   - Extracts tab from query parameter: tab = "products"
    - Matches path pattern: "/products/:id"
    - Extracts parameters: id = "123"
-   - Finds ViewModel: ProductDetailViewModel
-   - Gets RouteConfig
+   - Calls ProductDetailViewModel.createRoute(["id": "123"])
+   - Gets RouteConfig from ProductDetailViewModel
    ↓
    Returns: (activity: .ecommerce, tab: .products, route: .productDetail(Product))
    ↓
 3. AppCoordinator
    - Switch activity if different
-   - Switch tab if different
-   - Navigate to route
+   - Switch tab if specified (from URL or RouteConfig)
+   - Use routableTypeMap to find ViewModel by route identifier
+   - Build view using ViewModel.createView()
    ↓
 4. View Displayed
 ```
@@ -310,9 +307,10 @@ A shell script (`Scripts/generate_routable_files.sh`) runs before compilation:
 1. Scans all `*ViewModel.swift` files
 2. Finds extensions conforming to `Routable`
 3. Extracts `routeConfig.path` from each
-4. Generates two files:
+4. Generates route identifiers from ViewModel names (e.g., `ProductDetailViewModel` → `productDetail`)
+5. Generates two files:
    - `Route.swift` - Enum with all route cases
-   - `RoutableTypes.swift` - Array of all ViewModel types
+   - `RoutableTypes.swift` - Array of ViewModel types + route identifier map
 
 **Example Output:**
 
@@ -327,6 +325,7 @@ enum Route: Hashable {
     case orders
     case reviews
     case brochures
+    case brochureDetail(Brochure)
 
     var identifier: String {
         Mirror(reflecting: self).children.first?.label ?? String(describing: self)
@@ -342,15 +341,30 @@ let routableTypes: [any Routable.Type] = [
     SavedViewModel.self,
     OrdersViewModel.self,
     ReviewsViewModel.self,
-    BrochuresViewModel.self
+    BrochuresViewModel.self,
+    BrochureDetailViewModel.self
+]
+
+// Auto-generated map for O(1) route lookup
+let routableTypeMap: [String: any Routable.Type] = [
+    "home": HomeViewModel.self,
+    "productList": ProductListViewModel.self,
+    "productDetail": ProductDetailViewModel.self,
+    "favorites": FavoritesViewModel.self,
+    "saved": SavedViewModel.self,
+    "orders": OrdersViewModel.self,
+    "reviews": ReviewsViewModel.self,
+    "brochures": BrochuresViewModel.self,
+    "brochureDetail": BrochureDetailViewModel.self
 ]
 ```
 
 **Benefits:**
 - Zero manual maintenance
 - Compile-time safety
+- O(1) route lookup via map
 - Clean git diffs (files in `.gitignore`)
-- No switch statements needed
+- No switch statements or manual registration needed
 
 ### Adding a New Route
 
@@ -362,22 +376,44 @@ extension ProductReviewsViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: .products,
+            tab: nil,  // Opens in current tab
             path: "/products/:id/reviews"
         )
     }
-    // ... implement other protocol methods
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        guard let id = parameters["id"], let productId = Int(id) else {
+            return nil
+        }
+        let product = Product.mockList.first { $0.id == productId } ?? Product.mock
+        return .productReviews(product)
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        if case .productReviews(let product) = route {
+            return ["id": "\(product.id)"]
+        }
+        return [:]
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        // ... create and return view
+    }
 }
 ```
 
-2. **Build project** → Route automatically generated!
+2. **Build project** → Route, map entry, and identifier automatically generated!
 
 3. Use anywhere:
 ```swift
+// Internal navigation (stays on current tab)
 coordinator.navigate(to: "https://myapp.com/products/123/reviews")
+
+// From deeplink with specific tab
+coordinator.navigate(to: "myapp://products/123/reviews?tab=products")
 ```
 
-**That's it!** No URLRouter changes, no manual registration, no enum updates.
+**That's it!** No URLRouter changes, no manual registration, no enum updates, no canHandle needed.
 
 ---
 
@@ -579,13 +615,89 @@ func testFetchProducts() async throws {
 ```swift
 func testURLParsing() {
     let router = URLRouter()
-    let url = URL(string: "https://myapp.com/products/123")!
+    let url = URL(string: "https://myapp.com/products/123?tab=products")!
 
     let result = router.route(from: url)
 
     XCTAssertEqual(result?.activity, .ecommerce)
     XCTAssertEqual(result?.tab, .products)
 }
+```
+
+---
+
+## Deeplinks, Universal Links & Notifications
+
+### URL Schemes
+
+The app supports both custom schemes and universal links:
+
+**Custom Scheme:** `myapp://`
+- Configure in Xcode: Target → Info → URL Types
+- Example: `myapp://products/1?tab=products`
+
+**Universal Links:** `https://myapp.com`
+- Configure in Xcode: Target → Signing & Capabilities → Associated Domains
+- Requires server setup with `apple-app-site-association` file
+- Example: `https://myapp.com/products/1?tab=products`
+
+### Tab Query Parameter
+
+URLs can include an optional `?tab=` query parameter to specify which tab to open:
+
+```
+myapp://products/1              → Opens in current tab
+myapp://products/1?tab=products → Switches to Products tab
+myapp://brochures/1?tab=brochures → Switches to Brochures tab
+```
+
+**Tab values:** `home`, `products`, `favorites`, `brochures`
+
+### Notification Example
+
+Push notification payload with deeplink:
+
+```json
+{
+  "aps": {
+    "alert": {
+      "title": "New Product Available",
+      "body": "Check out the latest product!"
+    }
+  },
+  "url": "myapp://products/123?tab=products"
+}
+```
+
+Handle notification:
+```swift
+func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+) {
+    let userInfo = response.notification.request.content.userInfo
+    if let urlString = userInfo["url"] as? String,
+       let url = URL(string: urlString) {
+        coordinator.navigate(to: url)
+    }
+    completionHandler()
+}
+```
+
+### Testing Deeplinks
+
+**In Simulator:**
+```bash
+xcrun simctl openurl booted "myapp://products/1?tab=products"
+```
+
+**In Safari:**
+Type `myapp://products/1?tab=products` in address bar
+
+**From Code:**
+```swift
+coordinator.navigate(to: "myapp://products/1?tab=products")
 ```
 
 ---
@@ -609,7 +721,7 @@ func testURLParsing() {
 - **E-commerce**: Home, Products, Favorites tabs
 - **Brochure**: Brochures tab
 
-### Routes (8 total)
+### Routes (9 total)
 - Home (`/home`)
 - Product List (`/products`)
 - Product Detail (`/products/:id`)
@@ -618,16 +730,19 @@ func testURLParsing() {
 - Orders (`/orders`)
 - Reviews (`/reviews`)
 - Brochures (`/brochures`)
+- Brochure Detail (`/brochures/:id`)
 
 ### Features
-- ✅ URL-based navigation
+- ✅ URL-based navigation (internal + external)
 - ✅ Activity switching (manual + automatic)
-- ✅ Deep linking support
-- ✅ Auto-generated routing
-- ✅ Multi-tab navigation
-- ✅ State preservation
+- ✅ Deep linking support (custom scheme + universal links)
+- ✅ Auto-generated routing with O(1) lookup map
+- ✅ Multi-tab navigation with optional tab parameter
+- ✅ State preservation per tab
 - ✅ Pattern matching with parameters
 - ✅ Activity switcher UI component
+- ✅ Query parameter tab switching (`?tab=products`)
+- ✅ Notification deeplink handling
 
 ---
 
