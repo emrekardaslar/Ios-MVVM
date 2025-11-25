@@ -34,6 +34,10 @@ class HomeViewModel: ObservableObject {
     func navigateToReviews() {
         coordinator?.navigate(to: "https://myapp.com/reviews")
     }
+
+    func navigateToSaved() {
+        coordinator?.navigate(to: "https://myapp.com/saved")
+    }
 }
 
 // MARK: - Routable

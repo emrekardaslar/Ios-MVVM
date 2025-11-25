@@ -100,10 +100,13 @@ struct HomeView: View {
                 )
 
                 StatCard(
-                    icon: "creditcard.fill",
+                    icon: "bookmark.fill",
                     title: "Saved",
-                    value: "$245",
-                    color: .purple
+                    value: "2",
+                    color: .purple,
+                    action: {
+                        viewModel.navigateToSaved()
+                    }
                 )
             }
         }
