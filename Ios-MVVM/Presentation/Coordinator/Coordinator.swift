@@ -17,11 +17,12 @@ protocol Coordinator: AnyObject {
     // MARK: - URL-Based Navigation
     /// Navigate to a screen using a URL
     /// Supports both custom scheme (myapp://) and universal links (https://myapp.com)
+    /// Can include optional ?tab=tabName query parameter to specify which tab to open
     ///
     /// Examples:
     /// - myapp://products
-    /// - myapp://products/123
-    /// - https://myapp.com/orders
+    /// - myapp://products/123?tab=products
+    /// - https://myapp.com/orders?tab=home
     /// - https://myapp.com/favorites
     func navigate(to url: URL)
 

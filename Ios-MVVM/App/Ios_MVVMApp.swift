@@ -23,6 +23,9 @@ struct Ios_MVVMApp: App {
     var body: some Scene {
         WindowGroup {
             TabBarView(coordinator: coordinator)
+                .onOpenURL { url in
+                    coordinator.navigate(to: url)
+                }
         }
     }
 }

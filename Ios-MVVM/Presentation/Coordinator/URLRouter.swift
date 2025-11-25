@@ -61,26 +61,42 @@ class URLRouter {
 
     private func parseCustomSchemeURL(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         let path = "/" + (url.host ?? "")
-        return matchPath(path, parameters: url.queryParameters)
+        let tab = extractTabFromURL(url)
+        return matchPath(path, parameters: url.queryParameters, preferredTab: tab)
     }
 
     private func parseUniversalLink(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         let path = url.path.isEmpty ? "/" : url.path
-        return matchPath(path, parameters: url.queryParameters)
+        let tab = extractTabFromURL(url)
+        return matchPath(path, parameters: url.queryParameters, preferredTab: tab)
     }
 
-    private func matchPath(_ urlPath: String, parameters: [String: String]) -> (activity: Activity, tab: Tab?, route: Route)? {
+    private func matchPath(_ urlPath: String, parameters: [String: String], preferredTab: Tab?) -> (activity: Activity, tab: Tab?, route: Route)? {
         // Try to match against each ViewModel's path pattern
         for viewModelType in routableTypes {
             let config = viewModelType.routeConfig
             let pathPattern = config.path
 
             if let route = matchPathPattern(urlPath, against: pathPattern, viewModelType: viewModelType) {
-                return (config.activity, config.tab, route)
+                // Use preferredTab from URL if present, otherwise use config.tab
+                let finalTab = preferredTab ?? config.tab
+                return (config.activity, finalTab, route)
             }
         }
 
         return nil
+    }
+
+    /// Extracts the preferred tab from URL query parameters
+    /// Returns nil if no tab parameter is present
+    private func extractTabFromURL(_ url: URL) -> Tab? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              let tabParam = queryItems.first(where: { $0.name == "tab" })?.value else {
+            return nil
+        }
+
+        return Tab(rawValue: tabParam)
     }
 
     private func matchPathPattern(_ urlPath: String, against pattern: String, viewModelType: any Routable.Type) -> Route? {
