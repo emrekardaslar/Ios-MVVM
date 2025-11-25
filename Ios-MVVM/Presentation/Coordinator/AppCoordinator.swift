@@ -96,11 +96,19 @@ class AppCoordinator: ObservableObject, Coordinator {
     // MARK: - View Builder
     @MainActor
     func build(route: Route) -> AnyView {
-        // Try to build view from each ViewModel's createRoute
-        // Match by checking if the ViewModel's createRoute with extracted params equals our route
+        // Match by checking if extractParameters returns non-empty (has params)
+        // or if the route matches what createRoute produces
         for viewModelType in routableTypes {
             let params = viewModelType.extractParameters(from: route)
-            if let constructedRoute = viewModelType.createRoute(from: params), constructedRoute == route {
+
+            // If this ViewModel extracted parameters from the route, it handles it
+            if !params.isEmpty {
+                return viewModelType.createView(from: route, coordinator: self)
+            }
+
+            // For routes without parameters, check if createRoute matches by identifier
+            if let createdRoute = viewModelType.createRoute(from: [:]),
+               createdRoute.identifier == route.identifier {
                 return viewModelType.createView(from: route, coordinator: self)
             }
         }

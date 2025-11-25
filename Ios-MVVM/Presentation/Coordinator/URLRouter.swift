@@ -22,10 +22,20 @@ class URLRouter {
 
     /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
-        // Find the ViewModel that handles this route by checking if it can reconstruct it
+        // Find the ViewModel that handles this route
         for viewModelType in routableTypes {
             let params = viewModelType.extractParameters(from: route)
-            if let constructedRoute = viewModelType.createRoute(from: params), constructedRoute == route {
+
+            // Check if this ViewModel handles the route
+            var handles = false
+            if !params.isEmpty {
+                handles = true
+            } else if let createdRoute = viewModelType.createRoute(from: [:]),
+                      createdRoute.identifier == route.identifier {
+                handles = true
+            }
+
+            if handles {
                 let config = viewModelType.routeConfig
                 var path = config.path
 
