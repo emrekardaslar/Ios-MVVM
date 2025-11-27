@@ -17,6 +17,31 @@ This project demonstrates a scalable iOS application architecture using MVVM (Mo
 - Dependency Injection (Loose Coupling)
 - Auto-Generated Routing (Build-time code generation)
 
+## Key Innovation: Declarative Routing
+
+**The entire routing infrastructure is auto-generated from ViewModels.** Just create a ViewModel with a `RouteConfig` and the build system automatically generates:
+
+✨ **Activities** - Discovered from ViewModels
+✨ **Tabs** - With icons and ordering from `TabConfig`
+✨ **Routes** - All enum cases with parameters
+✨ **Mappings** - ViewModel lookup tables for O(1) routing
+
+**Example:** Add a new tab by creating a ViewModel:
+```swift
+extension SettingsViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: TabConfig(identifier: "settings", icon: "gear", index: 4),
+            path: "/settings"
+        )
+    }
+    // ... protocol methods
+}
+```
+
+**Build** → Tab appears in UI, routing works, deeplinks supported. **Zero manual updates.**
+
 ---
 
 ## Project Structure
@@ -200,41 +225,84 @@ E-Commerce Activity          Brochure Activity
 
 ---
 
-## URL-Based Navigation
+## URL-Based Navigation & Auto-Generated Routing
 
 ### Core Concept
 
-**Everything navigates using web URLs**. Whether it's:
-- User tapping a button
-- Deep link from notification
-- Universal link from web
-- App link from another app
+**Everything is declarative and auto-generated**. The routing system is entirely driven by ViewModels:
 
-All use the same API: `coordinator.navigate(to: URL)`
+- ✅ Activities auto-generated from ViewModels
+- ✅ Tabs auto-generated with icons and ordering
+- ✅ Routes auto-generated with parameter support
+- ✅ All navigation mappings generated at build time
 
-### RouteConfig
+**Zero manual maintenance** - just create a ViewModel and View, the rest is automatic.
 
-ViewModels declare their routing configuration:
+### How It Works
+
+1. **ViewModels declare routing via RouteConfig**
+2. **Build script scans all ViewModels**
+3. **Auto-generates 4 files:**
+   - `Route.swift` - All route cases
+   - `RoutableTypes.swift` - ViewModel array + lookup map
+   - `Activity.swift` - All activities with metadata
+   - `Tab.swift` - All tabs with icons, titles, activity mapping
+
+### RouteConfig & TabConfig
 
 ```swift
+/// Tab configuration - defines a new tab in the tab bar
+struct TabConfig {
+    let identifier: String  // Tab enum case name: "home", "cart", etc.
+    let icon: String        // SF Symbol: "house.fill", "cart.fill"
+    let index: Int          // Tab bar position: 0, 1, 2, 3...
+}
+
+/// Route configuration - every ViewModel has one
 struct RouteConfig {
-    let activity: Activity     // Which activity this belongs to
-    let tab: Tab              // Which tab to navigate to
-    let path: String          // URL path pattern
-    let requiresAuth: Bool    // Authentication requirement
+    let activity: Activity      // Which activity (.ecommerce, .brochure)
+    let tab: TabConfig?         // Tab config if this is a root view, nil for details
+    let path: String            // URL path pattern: "/products/:id"
+    let requiresAuth: Bool      // Authentication requirement
 }
 ```
 
-### ViewModel Example
+### ViewModel Examples
 
+**Tab Root View** (creates a new tab):
+```swift
+extension HomeViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: TabConfig(identifier: "home", icon: "house.fill", index: 0),
+            path: "/home"
+        )
+    }
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        return .home
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        return [:]
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = HomeViewModel(coordinator: coordinator)
+        return AnyView(HomeView(viewModel: viewModel))
+    }
+}
+```
+
+**Detail View** (no tab, opens in current context):
 ```swift
 extension ProductDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: .products,
-            path: "/products/:id",
-            requiresAuth: false
+            // No tab - opens in current tab
+            path: "/products/:id"
         )
     }
 
@@ -253,17 +321,12 @@ extension ProductDetailViewModel: Routable {
         return [:]
     }
 
-    static func canHandle(route: Route) -> Bool {
-        if case .productDetail = route { return true }
-        return false
-    }
-
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
         if case .productDetail(let product) = route {
             let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
             return AnyView(ProductDetailView(viewModel: viewModel))
         }
-        return AnyView(Text("Invalid route"))
+        return AnyView(Text("Invalid route").foregroundColor(.red))
     }
 }
 ```
@@ -273,111 +336,334 @@ extension ProductDetailViewModel: Routable {
 ```
 1. User Action / External Trigger
    ↓
-   coordinator.navigate(to: "https://myapp.com/products/123")
+   coordinator.navigate(to: "https://myapp.com/products/123?tab=products")
    ↓
 2. URLRouter.route(from: URL)
+   - Extracts tab query parameter: "products"
    - Matches path pattern: "/products/:id"
-   - Extracts parameters: id = "123"
-   - Finds ViewModel: ProductDetailViewModel
-   - Gets RouteConfig
+   - Extracts path parameters: ["id": "123"]
+   - Calls ProductDetailViewModel.createRoute(["id": "123"])
+   - Gets RouteConfig from ProductDetailViewModel
    ↓
    Returns: (activity: .ecommerce, tab: .products, route: .productDetail(Product))
    ↓
 3. AppCoordinator
    - Switch activity if different
-   - Switch tab if different
-   - Navigate to route
+   - Switch tab if specified (from URL or config)
+   - Lookup ViewModel using routableTypeMap[route.identifier]
+   - Call ViewModel.createView(route, coordinator)
    ↓
 4. View Displayed
 ```
 
 ### URL Pattern Matching
 
-Supports dynamic parameters:
-- `/home` → Exact match
+Supports dynamic parameters with type-safe extraction:
+- `/home` → Exact match, no parameters
 - `/products/:id` → Matches `/products/123`, extracts `id=123`
-- `/users/:userId/orders/:orderId` → Multiple parameters
+- `/brochures/:id` → Matches `/brochures/5`, extracts `id=5`
+- Multiple parameters: `/users/:userId/orders/:orderId`
+
+### Tab Switching via URL
+
+URLs can include optional `?tab=` query parameter:
+```
+myapp://products/1              → Opens in current tab
+myapp://products/1?tab=products → Switches to Products tab first
+myapp://cart?tab=cart           → Switches to Cart tab
+```
 
 ---
 
-## Auto-Generated Routing
+## Auto-Generated Files
 
-### Build-Time Code Generation
+### Build Script Intelligence
 
-A shell script (`Scripts/generate_routable_files.sh`) runs before compilation:
+The build script (`Scripts/generate_routable_files.sh`) runs before each compilation and:
 
-**What it does:**
-1. Scans all `*ViewModel.swift` files
-2. Finds extensions conforming to `Routable`
-3. Extracts `routeConfig.path` from each
-4. Generates two files:
-   - `Route.swift` - Enum with all route cases
-   - `RoutableTypes.swift` - Array of all ViewModel types
+**Scans ViewModels:**
+1. Finds all `*ViewModel.swift` files with `Routable` conformance
+2. Extracts `activity` from RouteConfig
+3. Extracts `TabConfig` (identifier, icon, index) if present
+4. Extracts `path` pattern for URL matching
+5. Generates route identifiers from ViewModel names
 
-**Example Output:**
+**Collects Metadata:**
+- Unique activities across all ViewModels
+- Unique tabs with their icons and indexes
+- Tab-to-activity mappings
+- Default tab for each activity (prefers "home", otherwise lowest index)
+- Route-to-ViewModel mappings
+
+**Generates 4 Files:**
+
+### 1. Route.swift
+
+All route cases with associated values:
 
 ```swift
-// Route.swift (auto-generated)
+// 🤖 AUTO-GENERATED - DO NOT EDIT
 enum Route: Hashable {
     case home
     case productList
     case productDetail(Product)
     case favorites
+    case cart
     case saved
     case orders
     case reviews
     case brochures
+    case brochureDetail(Brochure)
 
     var identifier: String {
         Mirror(reflecting: self).children.first?.label ?? String(describing: self)
     }
 }
+```
 
-// RoutableTypes.swift (auto-generated)
+### 2. RoutableTypes.swift
+
+ViewModel array for iteration + O(1) lookup map:
+
+```swift
+// 🤖 AUTO-GENERATED - DO NOT EDIT
 let routableTypes: [any Routable.Type] = [
     HomeViewModel.self,
     ProductListViewModel.self,
     ProductDetailViewModel.self,
     FavoritesViewModel.self,
+    CartViewModel.self,
     SavedViewModel.self,
     OrdersViewModel.self,
     ReviewsViewModel.self,
-    BrochuresViewModel.self
+    BrochuresViewModel.self,
+    BrochureDetailViewModel.self
+]
+
+// O(1) route identifier to ViewModel lookup
+let routableTypeMap: [String: any Routable.Type] = [
+    "home": HomeViewModel.self,
+    "productList": ProductListViewModel.self,
+    "productDetail": ProductDetailViewModel.self,
+    "favorites": FavoritesViewModel.self,
+    "cart": CartViewModel.self,
+    "saved": SavedViewModel.self,
+    "orders": OrdersViewModel.self,
+    "reviews": ReviewsViewModel.self,
+    "brochures": BrochuresViewModel.self,
+    "brochureDetail": BrochureDetailViewModel.self
 ]
 ```
 
-**Benefits:**
-- Zero manual maintenance
-- Compile-time safety
-- Clean git diffs (files in `.gitignore`)
-- No switch statements needed
+### 3. Activity.swift
 
-### Adding a New Route
+All activities with display names and default tabs:
 
-**Example: Add Product Reviews**
-
-1. Create `ProductReviewsViewModel.swift`:
 ```swift
-extension ProductReviewsViewModel: Routable {
-    static var routeConfig: RouteConfig {
-        RouteConfig(
-            activity: .ecommerce,
-            tab: .products,
-            path: "/products/:id/reviews"
-        )
+// 🤖 AUTO-GENERATED - DO NOT EDIT
+enum Activity: String, Codable, CaseIterable {
+    case ecommerce
+    case brochure
+
+    var displayName: String {
+        switch self {
+        case .ecommerce:
+            return "Ecommerce"
+        case .brochure:
+            return "Brochure"
+        }
     }
-    // ... implement other protocol methods
+
+    var defaultTab: Tab {
+        switch self {
+        case .ecommerce:
+            return .home
+        case .brochure:
+            return .brochures
+        }
+    }
 }
 ```
 
-2. **Build project** → Route automatically generated!
+### 4. Tab.swift
 
-3. Use anywhere:
+All tabs with icons, titles, activity mapping, and root routes:
+
 ```swift
-coordinator.navigate(to: "https://myapp.com/products/123/reviews")
+// 🤖 AUTO-GENERATED - DO NOT EDIT
+enum Tab: String, CaseIterable {
+    case home
+    case products
+    case favorites
+    case cart
+    case brochures
+
+    var title: String {
+        switch self {
+        case .home: return "Home"
+        case .products: return "Products"
+        case .favorites: return "Favorites"
+        case .cart: return "Cart"
+        case .brochures: return "Brochures"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .products: return "bag.fill"
+        case .favorites: return "heart.fill"
+        case .cart: return "cart.fill"
+        case .brochures: return "book.fill"
+        }
+    }
+
+    var activity: Activity {
+        switch self {
+        case .home: return .ecommerce
+        case .products: return .ecommerce
+        case .favorites: return .ecommerce
+        case .cart: return .ecommerce
+        case .brochures: return .brochure
+        }
+    }
+
+    var rootRoute: Route {
+        switch self {
+        case .home: return .home
+        case .products: return .productList
+        case .favorites: return .favorites
+        case .cart: return .cart
+        case .brochures: return .brochures
+        }
+    }
+
+    static func tabs(for activity: Activity) -> [Tab] {
+        allCases.filter { $0.activity == activity }
+    }
+}
 ```
 
-**That's it!** No URLRouter changes, no manual registration, no enum updates.
+### Benefits
+
+- ✅ **Zero manual maintenance** - just create ViewModels
+- ✅ **Compile-time safety** - type-checked at build time
+- ✅ **O(1) lookups** - instant route-to-ViewModel mapping
+- ✅ **Clean git diffs** - generated files in `.gitignore`
+- ✅ **No boilerplate** - no switch statements, registrations, or manual enums
+- ✅ **Tab ordering** - controlled by index in TabConfig
+- ✅ **Activity detection** - automatically discovered from ViewModels
+
+### Adding New Features
+
+**Example 1: Add a New Tab (Settings)**
+
+1. Create `SettingsViewModel.swift`:
+```swift
+extension SettingsViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            tab: TabConfig(identifier: "settings", icon: "gear", index: 4),
+            path: "/settings"
+        )
+    }
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        return .settings
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        return [:]
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        let viewModel = SettingsViewModel(coordinator: coordinator)
+        return AnyView(SettingsView(viewModel: viewModel))
+    }
+}
+```
+
+2. Create `SettingsView.swift`:
+```swift
+struct SettingsView: View {
+    @StateObject var viewModel: SettingsViewModel
+
+    var body: some View {
+        Text("Settings")
+            .navigationTitle("Settings")
+    }
+}
+```
+
+3. **Build project** → Everything auto-generated:
+   - ✅ `.settings` route case added to Route enum
+   - ✅ `.settings` tab case added to Tab enum
+   - ✅ SettingsViewModel added to routableTypes array
+   - ✅ "settings" → SettingsViewModel mapping added to routableTypeMap
+   - ✅ Tab appears in tab bar at index 4
+   - ✅ Icon "gear" automatically used
+
+4. Use anywhere:
+```swift
+coordinator.navigate(to: "myapp://settings?tab=settings")
+```
+
+**Example 2: Add a Detail View (Order Detail)**
+
+1. Create `OrderDetailViewModel.swift`:
+```swift
+extension OrderDetailViewModel: Routable {
+    static var routeConfig: RouteConfig {
+        RouteConfig(
+            activity: .ecommerce,
+            // No tab - opens in current tab
+            path: "/orders/:id"
+        )
+    }
+
+    static func createRoute(from parameters: [String: String]) -> Route? {
+        guard let id = parameters["id"], let orderId = Int(id) else {
+            return nil
+        }
+        let order = Order.mockOrders.first { $0.id == orderId } ?? Order.mock
+        return .orderDetail(order)
+    }
+
+    static func extractParameters(from route: Route) -> [String: String] {
+        if case .orderDetail(let order) = route {
+            return ["id": "\(order.id)"]
+        }
+        return [:]
+    }
+
+    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+        if case .orderDetail(let order) = route {
+            let viewModel = OrderDetailViewModel(order: order, coordinator: coordinator)
+            return AnyView(OrderDetailView(viewModel: viewModel))
+        }
+        return AnyView(Text("Invalid route").foregroundColor(.red))
+    }
+}
+```
+
+2. Create `OrderDetailView.swift`
+
+3. **Build project** → `.orderDetail(Order)` route added, no tab created
+
+4. Navigate from OrdersView:
+```swift
+viewModel.didSelectOrder(order)
+// Inside ViewModel:
+coordinator?.navigate(to: "https://myapp.com/orders/\(order.id)")
+```
+
+**That's it!** No manual updates to:
+- ❌ Activity enum
+- ❌ Tab enum (unless you want a tab)
+- ❌ Route enum
+- ❌ URLRouter
+- ❌ Any registration or mapping code
 
 ---
 
@@ -605,29 +891,42 @@ func testURLParsing() {
 
 ## Current Implementation
 
-### Activities
-- **E-commerce**: Home, Products, Favorites tabs
-- **Brochure**: Brochures tab
+### Activities (Auto-Generated)
+- **Ecommerce**: 4 tabs (Home, Products, Favorites, Cart)
+- **Brochure**: 1 tab (Brochures)
 
-### Routes (8 total)
+### Tabs (Auto-Generated)
+- **Home** - Index 0, Icon: house.fill (Ecommerce)
+- **Products** - Index 1, Icon: bag.fill (Ecommerce)
+- **Favorites** - Index 2, Icon: heart.fill (Ecommerce)
+- **Cart** - Index 3, Icon: cart.fill (Ecommerce)
+- **Brochures** - Index 0, Icon: book.fill (Brochure)
+
+### Routes (10 total, Auto-Generated)
 - Home (`/home`)
 - Product List (`/products`)
-- Product Detail (`/products/:id`)
+- Product Detail (`/products/:id`) - with parameter
 - Favorites (`/favorites`)
+- Cart (`/cart`)
 - Saved (`/saved`)
 - Orders (`/orders`)
 - Reviews (`/reviews`)
 - Brochures (`/brochures`)
+- Brochure Detail (`/brochures/:id`) - with parameter
 
 ### Features
-- ✅ URL-based navigation
-- ✅ Activity switching (manual + automatic)
-- ✅ Deep linking support
-- ✅ Auto-generated routing
-- ✅ Multi-tab navigation
-- ✅ State preservation
-- ✅ Pattern matching with parameters
-- ✅ Activity switcher UI component
+- ✅ **Fully auto-generated routing** - Activities, Tabs, Routes, Mappings
+- ✅ **Declarative configuration** - TabConfig defines everything
+- ✅ **URL-based navigation** - Internal & external (deeplinks, notifications)
+- ✅ **Activity switching** - Manual via UI + automatic via URL
+- ✅ **Deep linking support** - Custom scheme (`myapp://`) + Universal links
+- ✅ **Tab query parameters** - `?tab=products` for explicit tab switching
+- ✅ **Multi-tab navigation** - Independent navigation stacks per tab
+- ✅ **State preservation** - Navigation state maintained per tab
+- ✅ **Pattern matching** - Dynamic URL parameters (`:id`, `:userId`, etc.)
+- ✅ **Activity switcher** - UI component for switching between activities
+- ✅ **O(1) route lookup** - Fast ViewModel resolution via map
+- ✅ **Zero boilerplate** - No manual enums, registrations, or switch statements
 
 ---
 
@@ -637,13 +936,24 @@ func testURLParsing() {
 **Name**: "Generate Routable Files"
 **Script**: `bash "${SRCROOT}/Scripts/generate_routable_files.sh"`
 **Runs**: Before "Compile Sources"
-**Output Files**:
+**Output Files** (Auto-Generated):
 - `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/Route.swift`
 - `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift`
+- `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/Activity.swift`
+- `${SRCROOT}/Ios-MVVM/Presentation/Coordinator/Tab.swift`
 
 ### Requirements
 - `ENABLE_USER_SCRIPT_SANDBOXING = NO` (required for file system access)
-- Both output files in `.gitignore`
+
+### .gitignore
+Generated files should be in `.gitignore`:
+```
+# Auto-generated routing files
+Ios-MVVM/Presentation/Coordinator/Route.swift
+Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift
+Ios-MVVM/Presentation/Coordinator/Activity.swift
+Ios-MVVM/Presentation/Coordinator/Tab.swift
+```
 
 ---
 
