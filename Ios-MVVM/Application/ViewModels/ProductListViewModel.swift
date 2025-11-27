@@ -57,7 +57,7 @@ extension ProductListViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: nil,
+            tab: TabConfig(identifier: "products", icon: "bag.fill", index: 1),
             path: "/products"
         )
     }

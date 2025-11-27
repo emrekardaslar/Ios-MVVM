@@ -51,7 +51,6 @@ extension BrochureDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .brochure,
-            tab: nil,
             path: "/brochures/:id"
         )
     }

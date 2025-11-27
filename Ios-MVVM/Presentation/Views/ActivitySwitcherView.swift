@@ -19,7 +19,6 @@ struct ActivitySwitcherView: View {
                     coordinator.switchActivity(to: activity)
                 }) {
                     HStack {
-                        Image(systemName: activity.icon)
                         Text(activity.displayName)
 
                         if coordinator.currentActivity == activity {

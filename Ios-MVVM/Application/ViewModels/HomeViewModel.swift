@@ -45,7 +45,7 @@ extension HomeViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: nil,
+            tab: TabConfig(identifier: "home", icon: "house.fill", index: 0),
             path: "/home"
         )
     }

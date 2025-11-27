@@ -1,2 +1,4 @@
 Ios-MVVM/Presentation/Coordinator/RoutableTypes.swift
 Ios-MVVM/Presentation/Coordinator/Route.swift
+Ios-MVVM/Presentation/Coordinator/Activity.swift
+Ios-MVVM/Presentation/Coordinator/Tab.swift

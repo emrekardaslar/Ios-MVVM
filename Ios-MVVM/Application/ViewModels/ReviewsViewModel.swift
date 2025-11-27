@@ -72,7 +72,6 @@ extension ReviewsViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: nil,
             path: "/reviews"
         )
     }

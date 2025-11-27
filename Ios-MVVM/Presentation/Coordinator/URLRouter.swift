@@ -81,8 +81,11 @@ class URLRouter {
             let pathPattern = config.path
 
             if let route = matchPathPattern(urlPath, against: pathPattern, viewModelType: viewModelType) {
-                // Use preferredTab from URL if present, otherwise use config.tab
-                let finalTab = preferredTab ?? config.tab
+                // Convert TabConfig to Tab if present
+                let configTab: Tab? = config.tab != nil ? Tab(rawValue: config.tab!.identifier) : nil
+
+                // Use preferredTab from URL if present, otherwise use config tab
+                let finalTab = preferredTab ?? configTab
                 return (config.activity, finalTab, route)
             }
         }
