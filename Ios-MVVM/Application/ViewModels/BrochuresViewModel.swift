@@ -39,7 +39,7 @@ class BrochuresViewModel: ObservableObject {
 extension BrochuresViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .brochure,
+            activity: "brochure",
             tab: TabConfig(identifier: "brochures", icon: "book.fill", index: 0),
             path: "/brochures"
         )

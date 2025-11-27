@@ -44,7 +44,7 @@ class HomeViewModel: ObservableObject {
 extension HomeViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             tab: TabConfig(identifier: "home", icon: "house.fill", index: 0),
             path: "/home"
         )

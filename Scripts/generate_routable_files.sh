@@ -42,7 +42,7 @@ while IFS= read -r file; do
 
         # Extract activity from routeConfig
         ACTIVITY_LINE=$(/usr/bin/grep 'activity:' "$file" | /usr/bin/head -1)
-        if [[ $ACTIVITY_LINE =~ \.([a-zA-Z0-9_]+) ]]; then
+        if [[ $ACTIVITY_LINE =~ \"([a-zA-Z0-9_]+)\" ]]; then
             ACTIVITY="${BASH_REMATCH[1]}"
         else
             ACTIVITY=""

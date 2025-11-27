@@ -71,7 +71,7 @@ class ReviewsViewModel: ObservableObject {
 extension ReviewsViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             path: "/reviews"
         )
     }

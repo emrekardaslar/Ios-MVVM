@@ -56,7 +56,7 @@ class ProductListViewModel: ObservableObject {
 extension ProductListViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             tab: TabConfig(identifier: "products", icon: "bag.fill", index: 1),
             path: "/products"
         )

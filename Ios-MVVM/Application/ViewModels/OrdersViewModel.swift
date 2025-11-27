@@ -45,7 +45,7 @@ class OrdersViewModel: ObservableObject {
 extension OrdersViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             path: "/orders"
         )
     }

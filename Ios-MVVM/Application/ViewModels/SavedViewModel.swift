@@ -51,7 +51,7 @@ class SavedViewModel: ObservableObject {
 extension SavedViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             path: "/saved"
         )
     }

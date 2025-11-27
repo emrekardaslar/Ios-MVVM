@@ -21,12 +21,12 @@ struct TabConfig {
 }
 
 struct RouteConfig {
-    let activity: Activity
+    let activity: String    // Activity identifier: "ecommerce", "brochure", etc.
     let tab: TabConfig?     // Tab configuration with styling
     let path: String
     let requiresAuth: Bool
 
-    init(activity: Activity, tab: TabConfig? = nil, path: String, requiresAuth: Bool = false) {
+    init(activity: String, tab: TabConfig? = nil, path: String, requiresAuth: Bool = false) {
         self.activity = activity
         self.tab = tab
         self.path = path

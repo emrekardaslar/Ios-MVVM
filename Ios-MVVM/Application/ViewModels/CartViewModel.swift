@@ -53,7 +53,7 @@ class CartViewModel: ObservableObject {
 extension CartViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             tab: TabConfig(identifier: "cart", icon: "cart.fill", index: 3),
             path: "/cart"
         )

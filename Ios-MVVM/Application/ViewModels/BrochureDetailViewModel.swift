@@ -50,7 +50,7 @@ class BrochureDetailViewModel: ObservableObject {
 extension BrochureDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .brochure,
+            activity: "brochure",
             path: "/brochures/:id"
         )
     }

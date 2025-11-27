@@ -43,7 +43,7 @@ class ProductDetailViewModel: ObservableObject {
 extension ProductDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             path: "/products/:id"
         )
     }

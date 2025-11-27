@@ -46,7 +46,7 @@ class FavoritesViewModel: ObservableObject {
 extension FavoritesViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             tab: TabConfig(identifier: "favorites", icon: "heart.fill", index: 2),
             path: "/favorites"
         )

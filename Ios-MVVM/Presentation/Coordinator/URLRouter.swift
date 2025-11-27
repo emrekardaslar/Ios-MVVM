@@ -86,7 +86,13 @@ class URLRouter {
 
                 // Use preferredTab from URL if present, otherwise use config tab
                 let finalTab = preferredTab ?? configTab
-                return (config.activity, finalTab, route)
+
+                // Convert string activity to Activity enum
+                guard let activity = Activity(rawValue: config.activity) else {
+                    continue  // Skip if activity string is invalid
+                }
+
+                return (activity, finalTab, route)
             }
         }
 
