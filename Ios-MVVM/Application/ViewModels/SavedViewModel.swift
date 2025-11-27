@@ -52,7 +52,6 @@ extension SavedViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: nil,
             path: "/saved"
         )
     }

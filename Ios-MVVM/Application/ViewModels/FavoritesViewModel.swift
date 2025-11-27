@@ -47,7 +47,7 @@ extension FavoritesViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
             activity: .ecommerce,
-            tab: nil,
+            tab: TabConfig(identifier: "favorites", icon: "heart.fill", index: 2),
             path: "/favorites"
         )
     }
