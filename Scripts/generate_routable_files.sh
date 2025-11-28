@@ -467,10 +467,6 @@ done
 /// Creates a Route from an identifier and extracted parameters
 @MainActor
 func createRoute(identifier: String, parameters: [String: String]) -> Route? {
-    guard let viewModelType = routableTypeMap[identifier] else {
-        return nil
-    }
-
     switch identifier {
 EOF
 
@@ -513,8 +509,6 @@ done
 /// Extracts parameters from a Route for URL construction
 @MainActor
 func extractParameters(from route: Route) -> (identifier: String, parameters: [String: String]) {
-    let identifier = route.identifier
-
     switch route {
 EOF
 
