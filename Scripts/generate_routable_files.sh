@@ -463,6 +463,84 @@ done
 
 /bin/cat >> "${TYPES_OUTPUT}" << 'EOF'
 ]
+
+/// Creates a Route from an identifier and extracted parameters
+@MainActor
+func createRoute(identifier: String, parameters: [String: String]) -> Route? {
+    guard let viewModelType = routableTypeMap[identifier] else {
+        return nil
+    }
+
+    switch identifier {
+EOF
+
+# Add switch cases for route creation
+for i in "${!TYPE_NAMES[@]}"; do
+    TYPE="${TYPE_NAMES[$i]}"
+    PATH="${TYPE_PATHS[$i]}"
+    ROUTE_ID="${TYPE_IDS[$i]}"
+
+    /bin/echo "    case \"${ROUTE_ID}\":" >> "${TYPES_OUTPUT}"
+
+    # Check if path has parameters
+    if [[ $PATH == *":"* ]]; then
+        # Extract parameter names from path (e.g., /products/:id -> id)
+        PARAM_NAMES=$(echo "$PATH" | /usr/bin/grep -o ':[a-zA-Z0-9_]*' | /usr/bin/sed 's/://' | /usr/bin/tr '\n' ' ')
+
+        # Generate parameter extraction logic
+        /bin/echo "        // Path: ${PATH}" >> "${TYPES_OUTPUT}"
+
+        # Extract model type from ViewModel name
+        MODEL=$(echo "$TYPE" | /usr/bin/sed 's/DetailViewModel//' | /usr/bin/sed 's/ViewModel//')
+
+        # For now, we'll use a simplified approach - just return the route case with mock data
+        # In a real implementation, you'd fetch from repository
+        /bin/echo "        guard let idParam = parameters[\"id\"], let id = Int(idParam) else { return nil }" >> "${TYPES_OUTPUT}"
+        /bin/echo "        let mockData = ${MODEL}.mockList.first { \$0.id == id } ?? ${MODEL}.mock" >> "${TYPES_OUTPUT}"
+        /bin/echo "        return .${ROUTE_ID}(mockData)" >> "${TYPES_OUTPUT}"
+    else
+        # No parameters, simple case
+        /bin/echo "        return .${ROUTE_ID}" >> "${TYPES_OUTPUT}"
+    fi
+done
+
+/bin/cat >> "${TYPES_OUTPUT}" << 'EOF'
+    default:
+        return nil
+    }
+}
+
+/// Extracts parameters from a Route for URL construction
+@MainActor
+func extractParameters(from route: Route) -> (identifier: String, parameters: [String: String]) {
+    let identifier = route.identifier
+
+    switch route {
+EOF
+
+# Add switch cases for parameter extraction
+for i in "${!TYPE_NAMES[@]}"; do
+    TYPE="${TYPE_NAMES[$i]}"
+    PATH="${TYPE_PATHS[$i]}"
+    ROUTE_ID="${TYPE_IDS[$i]}"
+
+    # Check if path has parameters
+    if [[ $PATH == *":"* ]]; then
+        # Extract model type
+        MODEL=$(echo "$TYPE" | /usr/bin/sed 's/DetailViewModel//' | /usr/bin/sed 's/ViewModel//')
+        MODEL_VAR=$(echo "$MODEL" | /usr/bin/awk '{print tolower(substr($0,1,1)) substr($0,2)}')
+
+        /bin/echo "    case .${ROUTE_ID}(let ${MODEL_VAR}):" >> "${TYPES_OUTPUT}"
+        /bin/echo "        return (\"${ROUTE_ID}\", [\"id\": \"\(${MODEL_VAR}.id)\"])" >> "${TYPES_OUTPUT}"
+    else
+        /bin/echo "    case .${ROUTE_ID}:" >> "${TYPES_OUTPUT}"
+        /bin/echo "        return (\"${ROUTE_ID}\", [:])" >> "${TYPES_OUTPUT}"
+    fi
+done
+
+/bin/cat >> "${TYPES_OUTPUT}" << 'EOF'
+    }
+}
 EOF
 
 echo "✅ Generated RoutableTypes.swift with ${TYPE_COUNT} types"

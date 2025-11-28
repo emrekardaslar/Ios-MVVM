@@ -13,21 +13,10 @@ protocol Routable {
     /// Route configuration including activity, tab, path, and auth requirements
     static var routeConfig: RouteConfig { get }
 
-    /// Creates a Route from extracted URL parameters
-    /// Used by URLRouter to construct routes from incoming URLs
-    /// - Parameter parameters: Dictionary of parameter names to values extracted from URL
-    /// - Returns: The constructed Route, or nil if parameters are invalid
-    static func createRoute(from parameters: [String: String]) -> Route?
-
-    /// Extracts parameters from a Route for URL construction
-    /// - Parameter route: The route to extract parameters from
-    /// - Returns: Dictionary of parameter names to values, or empty if no parameters
-    static func extractParameters(from route: Route) -> [String: String]
-
-    /// Creates the view for the given route
+    /// Creates the view for the given route with extracted parameters
     /// - Parameters:
-    ///   - route: The route to build (may contain associated values)
+    ///   - parameters: Dictionary of parameter names to values extracted from URL path
     ///   - coordinator: The coordinator for navigation
     /// - Returns: The constructed view wrapped in AnyView
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView
 }

@@ -22,8 +22,11 @@ class URLRouter {
 
     /// Converts a Route to a URL using ViewModel paths
     func url(for route: Route) -> URL? {
+        // Extract identifier and parameters from the route
+        let (identifier, params) = extractParameters(from: route)
+
         // Use the auto-generated map to find the ViewModel for this route
-        guard let viewModelType = routableTypeMap[route.identifier] else {
+        guard let viewModelType = routableTypeMap[identifier] else {
             return nil
         }
 
@@ -31,7 +34,6 @@ class URLRouter {
         var path = config.path
 
         // Replace path parameters with actual values from the route
-        let params = viewModelType.extractParameters(from: route)
         for (key, value) in params {
             path = path.replacingOccurrences(of: ":\(key)", with: value)
         }
@@ -134,8 +136,14 @@ class URLRouter {
             }
         }
 
-        // Pattern matched! Now let the ViewModel create the route from parameters
-        return viewModelType.createRoute(from: extractedParams)
+        // Pattern matched! Get route identifier from ViewModel name
+        // HomeViewModel -> home, ProductDetailViewModel -> productDetail
+        let typeName = String(describing: viewModelType)
+        var routeId = typeName.replacingOccurrences(of: "ViewModel", with: "")
+        routeId = routeId.prefix(1).lowercased() + routeId.dropFirst()
+
+        // Use the auto-generated createRoute function to construct the route
+        return createRoute(identifier: routeId, parameters: extractedParams)
     }
 }
 

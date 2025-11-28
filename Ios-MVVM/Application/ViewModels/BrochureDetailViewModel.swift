@@ -55,29 +55,13 @@ extension BrochureDetailViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         guard let idParam = parameters["id"], let brochureId = Int(idParam) else {
-            return nil
+            return AnyView(Text("Invalid brochure ID").foregroundColor(.red))
         }
         // In a real app, fetch from repository
         let brochure = Brochure.mockList.first { $0.id == brochureId } ?? Brochure.mock
-        return .brochureDetail(brochure)
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        if case .brochureDetail(let brochure) = route {
-            return ["id": "\(brochure.id)"]
-        }
-        return [:]
-    }
-
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        if case .brochureDetail(let brochure) = route {
-            let viewModel = BrochureDetailViewModel(brochure: brochure, coordinator: coordinator)
-            return AnyView(BrochureDetailView(viewModel: viewModel))
-        } else {
-            return AnyView(Text("Invalid route for BrochureDetail").foregroundColor(.red))
-        }
+        let viewModel = BrochureDetailViewModel(brochure: brochure, coordinator: coordinator)
+        return AnyView(BrochureDetailView(viewModel: viewModel))
     }
 }

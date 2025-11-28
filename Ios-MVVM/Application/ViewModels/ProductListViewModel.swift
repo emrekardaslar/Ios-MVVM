@@ -62,16 +62,7 @@ extension ProductListViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
-        return .productList
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        return [:]
-    }
-
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         guard let appCoordinator = coordinator as? AppCoordinator else {
             return AnyView(Text("Invalid coordinator").foregroundColor(.red))
         }

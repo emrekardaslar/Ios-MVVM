@@ -96,12 +96,15 @@ class AppCoordinator: ObservableObject, Coordinator {
     // MARK: - View Builder
     @MainActor
     func build(route: Route) -> AnyView {
+        // Extract identifier and parameters from the route
+        let (identifier, parameters) = extractParameters(from: route)
+
         // Use the auto-generated map to find the ViewModel for this route
-        if let viewModelType = routableTypeMap[route.identifier] {
-            return viewModelType.createView(from: route, coordinator: self)
+        if let viewModelType = routableTypeMap[identifier] {
+            return viewModelType.createView(parameters: parameters, coordinator: self)
         }
 
-        return AnyView(Text("No ViewModel found for route: \(route.identifier)").foregroundColor(.red))
+        return AnyView(Text("No ViewModel found for route: \(identifier)").foregroundColor(.red))
     }
 
     // MARK: - Dependency Access

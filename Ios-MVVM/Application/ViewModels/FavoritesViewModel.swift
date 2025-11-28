@@ -52,16 +52,7 @@ extension FavoritesViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
-        return .favorites
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        return [:]
-    }
-
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         let viewModel = FavoritesViewModel(coordinator: coordinator)
         return AnyView(FavoritesView(viewModel: viewModel))
     }

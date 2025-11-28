@@ -48,29 +48,13 @@ extension ProductDetailViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         guard let idParam = parameters["id"], let productId = Int(idParam) else {
-            return nil
+            return AnyView(Text("Invalid product ID").foregroundColor(.red))
         }
         // In a real app, fetch from repository
         let product = Product.mockList.first { $0.id == productId } ?? Product.mock
-        return .productDetail(product)
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        if case .productDetail(let product) = route {
-            return ["id": "\(product.id)"]
-        }
-        return [:]
-    }
-
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        if case .productDetail(let product) = route {
-            let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
-            return AnyView(ProductDetailView(viewModel: viewModel))
-        } else {
-            return AnyView(Text("Invalid route for ProductDetail").foregroundColor(.red))
-        }
+        let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+        return AnyView(ProductDetailView(viewModel: viewModel))
     }
 }

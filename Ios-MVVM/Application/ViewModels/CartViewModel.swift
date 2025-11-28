@@ -59,15 +59,7 @@ extension CartViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
-        return .cart
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        return [:]
-    }
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         let viewModel = CartViewModel(coordinator: coordinator)
         return AnyView(CartView(viewModel: viewModel))
     }

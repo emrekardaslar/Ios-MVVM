@@ -50,16 +50,7 @@ extension HomeViewModel: Routable {
         )
     }
 
-    static func createRoute(from parameters: [String: String]) -> Route? {
-        return .home
-    }
-
-    static func extractParameters(from route: Route) -> [String: String] {
-        return [:]
-    }
-
-
-    static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
+    static func createView(parameters: [String: String], coordinator: Coordinator) -> AnyView {
         let viewModel = HomeViewModel(coordinator: coordinator)
         return AnyView(HomeView(viewModel: viewModel))
     }
