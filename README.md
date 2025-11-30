@@ -48,6 +48,11 @@ extension SettingsViewModel: Routable {
 
 ```
 Ios-MVVM/
+├── Domain/
+│   └── Models/
+│       ├── Product.swift
+│       ├── Brochure.swift
+│       └── Order.swift
 ├── Infrastructure/
 │   ├── Repositories/
 │   │   ├── Protocols/
@@ -63,20 +68,17 @@ Ios-MVVM/
 │   └── Services/
 │       └── NetworkService.swift
 ├── Application/
-│   ├── ViewModels/
-│   │   ├── HomeViewModel.swift
-│   │   ├── ProductListViewModel.swift
-│   │   ├── ProductDetailViewModel.swift
-│   │   ├── BrochuresViewModel.swift
-│   │   ├── BrochureDetailViewModel.swift
-│   │   ├── OrdersViewModel.swift
-│   │   └── FavoritesViewModel.swift
-│   └── Models/
-│       ├── Product.swift
-│       ├── Brochure.swift
-│       └── Order.swift
+│   └── ViewModels/
+│       ├── HomeViewModel.swift
+│       ├── ProductListViewModel.swift
+│       ├── ProductDetailViewModel.swift
+│       ├── BrochuresViewModel.swift
+│       ├── BrochureDetailViewModel.swift
+│       ├── OrdersViewModel.swift
+│       └── FavoritesViewModel.swift
 ├── Presentation/
 │   ├── Views/
+│   │   ├── Ios_MVVMApp.swift
 │   │   ├── TabBarView.swift
 │   │   ├── ActivitySwitcherView.swift
 │   │   ├── HomeView.swift
@@ -98,17 +100,32 @@ Ios-MVVM/
 │       └── RoutableTypes.swift (auto-generated)
 ├── DI/
 │   └── DIContainer.swift
-├── Scripts/
-│   └── generate_routable_files.sh
-└── App/
-    └── Ios_MVVMApp.swift
+└── Scripts/
+    └── generate_routable_files.sh
 ```
 
 ---
 
 ## Architecture Layers
 
-### 1. Infrastructure Layer
+### 1. Domain Layer
+**Purpose:** Core business entities and models
+
+**Components:**
+- **Models**: Domain models representing business entities
+  - Product, Brochure, Order
+  - Plain Swift structs/classes
+  - Codable conformance for network serialization
+  - Independent of any framework or infrastructure
+
+**Responsibilities:**
+- Define business entities
+- Model validation rules
+- Business rules and constraints
+
+---
+
+### 2. Infrastructure Layer
 **Purpose:** Data access and external service communication
 
 **Components:**
@@ -130,7 +147,7 @@ Ios-MVVM/
 
 ---
 
-### 2. Application Layer
+### 3. Application Layer
 **Purpose:** Business logic and state management
 
 **Components:**
@@ -144,11 +161,6 @@ Ios-MVVM/
   - No direct UIKit/SwiftUI dependencies (testable)
   - Conforms to Routable protocol for routing configuration
 
-- **Models**:
-  - Domain models (business entities)
-  - Plain Swift structs/classes
-  - Codable conformance for network serialization
-
 **Responsibilities:**
 - Business logic execution
 - Async data loading and state management
@@ -158,7 +170,7 @@ Ios-MVVM/
 
 ---
 
-### 3. Presentation Layer
+### 4. Presentation Layer
 **Purpose:** User interface and navigation
 
 **Components:**
