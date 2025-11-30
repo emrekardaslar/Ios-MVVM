@@ -358,20 +358,21 @@ extension ProductDetailViewModel: Routable {
 ```
 1. User Action / External Trigger
    ↓
-   coordinator.navigate(to: "https://myapp.com/products/123?tab=products")
+   coordinator.navigate(to: "https://myapp.com/products/123")
    ↓
 2. URLRouter.route(from: URL)
-   - Extracts tab query parameter: "products"
    - Matches path pattern: "/products/:id"
    - Extracts path parameters: ["id": "123"]
    - Calls ProductDetailViewModel.createRoute(["id": "123"])
    - Gets RouteConfig from ProductDetailViewModel
+   - Checks if ViewModel has a tab in its config
    ↓
-   Returns: (activity: .ecommerce, tab: .products, route: .productDetail(productId: 123))
+   Returns: (activity: .ecommerce, tab: nil, route: .productDetail(productId: 123))
+   (tab is nil because ProductDetailViewModel doesn't declare a tab - it's a detail view)
    ↓
 3. AppCoordinator
    - Switch activity if different
-   - Switch tab if specified (from URL or config)
+   - Switch tab if ViewModel declared one (in this case, no tab so stays on current tab)
    - Lookup ViewModel using routableTypeMap[route.identifier]
    - Call ViewModel.createView(route, coordinator)
    - ViewModel receives productId and repository
@@ -380,6 +381,10 @@ extension ProductDetailViewModel: Routable {
 4. View Displayed with loading → content states
 ```
 
+**Tab Switching Behavior:**
+- ViewModels with `tab` in RouteConfig (like ProductListViewModel, FavoritesViewModel) → Auto-switch to that tab
+- ViewModels without `tab` in RouteConfig (like ProductDetailViewModel, OrdersViewModel) → Open in current tab
+
 ### URL Pattern Matching
 
 Supports dynamic parameters with type-safe extraction:
@@ -387,15 +392,6 @@ Supports dynamic parameters with type-safe extraction:
 - `/products/:id` → Matches `/products/123`, extracts `id=123`
 - `/brochures/:id` → Matches `/brochures/5`, extracts `id=5`
 - Multiple parameters: `/users/:userId/orders/:orderId`
-
-### Tab Switching via URL
-
-URLs can include optional `?tab=` query parameter:
-```
-myapp://products/1              → Opens in current tab
-myapp://products/1?tab=products → Switches to Products tab first
-myapp://cart?tab=cart           → Switches to Cart tab
-```
 
 ---
 
@@ -616,7 +612,7 @@ struct SettingsView: View {
 
 4. Use anywhere:
 ```swift
-coordinator.navigate(to: "myapp://settings?tab=settings")
+coordinator.navigate(to: "myapp://settings")
 ```
 
 **Example 2: Add a Detail View (Order Detail)**
@@ -1078,13 +1074,14 @@ func testURLParsing() {
 ## Key Principles
 
 1. **URL-Driven Navigation**: Single API for all navigation sources
-2. **ViewModel-Driven Routing**: ViewModels define their own routes
-3. **Activity Isolation**: Clean separation of app contexts
-4. **Auto-Generation**: Build-time code generation eliminates boilerplate
-5. **Separation of Concerns**: Each layer has a single responsibility
-6. **Dependency Inversion**: Depend on abstractions (protocols)
-7. **Testability**: All components can be tested in isolation
-8. **Scalability**: Easy to add new features/activities/routes
+2. **ViewModel-Driven Routing**: ViewModels define their own routes and tab behavior
+3. **Smart Tab Switching**: Tab switching determined by ViewModel config, not URL parameters
+4. **Activity Isolation**: Clean separation of app contexts
+5. **Auto-Generation**: Build-time code generation eliminates boilerplate
+6. **Separation of Concerns**: Each layer has a single responsibility
+7. **Dependency Inversion**: Depend on abstractions (protocols)
+8. **Testability**: All components can be tested in isolation
+9. **Scalability**: Easy to add new features/activities/routes
 
 ---
 
@@ -1121,7 +1118,6 @@ func testURLParsing() {
 - ✅ **URL-based navigation** - Internal & external (deeplinks, notifications)
 - ✅ **Activity switching** - Manual via UI + automatic via URL
 - ✅ **Deep linking support** - Custom scheme (`myapp://`) + Universal links
-- ✅ **Tab query parameters** - `?tab=products` for explicit tab switching
 - ✅ **Multi-tab navigation** - Independent navigation stacks per tab
 - ✅ **State preservation** - Navigation state maintained per tab
 - ✅ **Pattern matching** - Dynamic URL parameters (`:id`, `:userId`, etc.)

@@ -17,13 +17,15 @@ protocol Coordinator: AnyObject {
     // MARK: - URL-Based Navigation
     /// Navigate to a screen using a URL
     /// Supports both custom scheme (myapp://) and universal links (https://myapp.com)
-    /// Can include optional ?tab=tabName query parameter to specify which tab to open
+    ///
+    /// Automatically switches to the correct tab if the ViewModel declares one in its RouteConfig
+    /// Detail views (without tab config) open in the current tab
     ///
     /// Examples:
-    /// - myapp://products
-    /// - myapp://products/123?tab=products
-    /// - https://myapp.com/orders?tab=home
-    /// - https://myapp.com/favorites
+    /// - myapp://products → Switches to Products tab (has tab in config)
+    /// - myapp://products/123 → Opens in current tab (detail view, no tab config)
+    /// - https://myapp.com/orders → Opens in current tab (no tab config)
+    /// - https://myapp.com/favorites → Switches to Favorites tab (has tab in config)
     func navigate(to url: URL)
 
     /// Navigate to a screen using a URL string

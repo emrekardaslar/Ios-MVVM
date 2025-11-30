@@ -68,7 +68,8 @@ class AppCoordinator: ObservableObject, Coordinator {
             currentActivity = activity
         }
 
-        // Switch tab if specified and belongs to current activity
+        // Switch tab if the ViewModel declares it belongs to a specific tab
+        // and that tab belongs to the current activity
         if let tab = tab, tab.activity == currentActivity {
             currentTab = tab
         }

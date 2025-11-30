@@ -41,7 +41,8 @@ class URLRouter {
 
     // MARK: - URL to Route Mapping
 
-    /// Parses a URL and returns the corresponding Route with activity and optional tab info
+    /// Parses a URL and returns the corresponding Route with activity and optional tab
+    /// Tab is determined by the ViewModel's RouteConfig, not by URL parameters
     /// Dynamically matches against ViewModel-defined paths
     func route(from url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         // Handle custom scheme (myapp://products)
@@ -64,51 +65,34 @@ class URLRouter {
         let host = url.host ?? ""
         let urlPath = url.path
         let fullPath = "/" + host + (urlPath.isEmpty || urlPath == "/" ? "" : urlPath)
-        let tab = extractTabFromURL(url)
-        return matchPath(fullPath, parameters: url.queryParameters, preferredTab: tab)
+        return matchPath(fullPath, parameters: url.queryParameters)
     }
 
     private func parseUniversalLink(_ url: URL) -> (activity: Activity, tab: Tab?, route: Route)? {
         let path = url.path.isEmpty ? "/" : url.path
-        let tab = extractTabFromURL(url)
-        return matchPath(path, parameters: url.queryParameters, preferredTab: tab)
+        return matchPath(path, parameters: url.queryParameters)
     }
 
-    private func matchPath(_ urlPath: String, parameters: [String: String], preferredTab: Tab?) -> (activity: Activity, tab: Tab?, route: Route)? {
+    private func matchPath(_ urlPath: String, parameters: [String: String]) -> (activity: Activity, tab: Tab?, route: Route)? {
         // Try to match against each ViewModel's path pattern
         for viewModelType in routableTypes {
             let config = viewModelType.routeConfig
             let pathPattern = config.path
 
             if let route = matchPathPattern(urlPath, against: pathPattern, viewModelType: viewModelType) {
-                // Convert TabConfig to Tab if present
-                let configTab: Tab? = config.tab != nil ? Tab(rawValue: config.tab!.identifier) : nil
-
-                // Use preferredTab from URL if present, otherwise use config tab
-                let finalTab = preferredTab ?? configTab
-
                 // Convert string activity to Activity enum
                 guard let activity = Activity(rawValue: config.activity) else {
                     continue  // Skip if activity string is invalid
                 }
 
-                return (activity, finalTab, route)
+                // Get tab from ViewModel's RouteConfig if present
+                let tab: Tab? = config.tab != nil ? Tab(rawValue: config.tab!.identifier) : nil
+
+                return (activity, tab, route)
             }
         }
 
         return nil
-    }
-
-    /// Extracts the preferred tab from URL query parameters
-    /// Returns nil if no tab parameter is present
-    private func extractTabFromURL(_ url: URL) -> Tab? {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let queryItems = components.queryItems,
-              let tabParam = queryItems.first(where: { $0.name == "tab" })?.value else {
-            return nil
-        }
-
-        return Tab(rawValue: tabParam)
     }
 
     private func matchPathPattern(_ urlPath: String, against pattern: String, viewModelType: any Routable.Type) -> Route? {
