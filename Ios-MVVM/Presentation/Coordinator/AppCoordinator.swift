@@ -103,9 +103,4 @@ class AppCoordinator: ObservableObject, Coordinator {
 
         return AnyView(Text("No ViewModel found for route: \(route.identifier)").foregroundColor(.red))
     }
-
-    // MARK: - Dependency Access
-    var productRepository: ProductRepositoryProtocol {
-        container.productRepository
-    }
 }
