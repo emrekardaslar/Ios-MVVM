@@ -11,16 +11,35 @@ struct BrochuresView: View {
     @StateObject var viewModel: BrochuresViewModel
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                ForEach(viewModel.brochures) { brochure in
-                    BrochureCard(brochure: brochure)
-                        .onTapGesture {
-                            viewModel.didSelectBrochure(brochure)
+        Group {
+            if viewModel.isLoading {
+                ProgressView("Loading brochures...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        viewModel.retry()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding()
+            } else {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        ForEach(viewModel.brochures) { brochure in
+                            BrochureCard(brochure: brochure)
+                                .onTapGesture {
+                                    viewModel.didSelectBrochure(brochure)
+                                }
                         }
+                    }
+                    .padding()
                 }
             }
-            .padding()
         }
         .navigationTitle("Brochures")
     }
@@ -88,7 +107,10 @@ struct BrochureCard: View {
 #Preview {
     NavigationStack {
         BrochuresView(
-            viewModel: BrochuresViewModel(coordinator: nil)
+            viewModel: BrochuresViewModel(
+                brochureRepository: DIContainer.shared.brochureRepository,
+                coordinator: nil
+            )
         )
     }
 }
