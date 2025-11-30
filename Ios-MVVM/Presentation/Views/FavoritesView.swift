@@ -12,7 +12,22 @@ struct FavoritesView: View {
 
     var body: some View {
         Group {
-            if viewModel.favoriteProducts.isEmpty {
+            if viewModel.isLoading {
+                ProgressView("Loading favorites...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        viewModel.retry()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding()
+            } else if viewModel.favoriteProducts.isEmpty {
                 emptyState
             } else {
                 favoritesList
@@ -118,7 +133,10 @@ struct FavoriteProductRow: View {
 #Preview {
     NavigationStack {
         FavoritesView(
-            viewModel: FavoritesViewModel(coordinator: nil)
+            viewModel: FavoritesViewModel(
+                favoritesRepository: DIContainer.shared.favoritesRepository,
+                coordinator: nil
+            )
         )
     }
 }

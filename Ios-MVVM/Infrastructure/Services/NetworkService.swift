@@ -99,6 +99,20 @@ class NetworkService: NetworkServiceProtocol {
             }
         }
 
+        // Handle order endpoints
+        if endpoint == "/orders" {
+            return Order.mockOrders
+        } else if endpoint.hasPrefix("/orders/") {
+            let idString = endpoint.replacingOccurrences(of: "/orders/", with: "")
+            return Order.mockOrders.first(where: { $0.id == idString })
+        }
+
+        // Handle favorites endpoints
+        if endpoint == "/favorites" {
+            // Return a subset of products as favorites
+            return [Product.mockList[0], Product.mockList[2]]
+        }
+
         return nil
     }
 }

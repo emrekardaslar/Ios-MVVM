@@ -14,6 +14,19 @@ struct OrdersView: View {
         Group {
             if viewModel.isLoading {
                 ProgressView("Loading orders...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        viewModel.retry()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding()
             } else if viewModel.orders.isEmpty {
                 emptyState
             } else {
@@ -151,7 +164,10 @@ struct StatusBadge: View {
 #Preview {
     NavigationStack {
         OrdersView(
-            viewModel: OrdersViewModel(coordinator: nil)
+            viewModel: OrdersViewModel(
+                orderRepository: DIContainer.shared.orderRepository,
+                coordinator: nil
+            )
         )
     }
 }
