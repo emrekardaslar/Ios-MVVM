@@ -19,6 +19,10 @@ class DIContainer {
         ProductRepository(networkService: networkService)
     }()
 
+    lazy var brochureRepository: BrochureRepositoryProtocol = {
+        BrochureRepository(networkService: networkService)
+    }()
+
     // MARK: - Coordinator
     private(set) var coordinator: (any Coordinator)?
 

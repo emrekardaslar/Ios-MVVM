@@ -72,11 +72,8 @@ extension ProductListViewModel: Routable {
 
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        guard let appCoordinator = coordinator as? AppCoordinator else {
-            return AnyView(Text("Invalid coordinator").foregroundColor(.red))
-        }
         let viewModel = ProductListViewModel(
-            productRepository: appCoordinator.productRepository,
+            productRepository: DIContainer.shared.productRepository,
             coordinator: coordinator
         )
         return AnyView(ProductListView(viewModel: viewModel))

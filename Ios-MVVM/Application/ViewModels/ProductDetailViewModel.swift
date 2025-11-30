@@ -13,24 +13,50 @@ import SwiftUI
 @MainActor
 class ProductDetailViewModel: ObservableObject {
     // MARK: - Published Properties
-    @Published var product: Product
+    @Published var product: Product?
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
 
     // MARK: - Dependencies
+    private let productRepository: ProductRepositoryProtocol
     private weak var coordinator: Coordinator?
+    private let productId: Int
 
     // MARK: - Initialization
-    init(product: Product, coordinator: Coordinator?) {
-        self.product = product
+    init(productId: Int, productRepository: ProductRepositoryProtocol, coordinator: Coordinator?) {
+        self.productId = productId
+        self.productRepository = productRepository
         self.coordinator = coordinator
+
+        // Fetch product data
+        Task {
+            await loadProduct()
+        }
     }
 
     // MARK: - Computed Properties
     var formattedPrice: String {
-        String(format: "$%.2f", product.price)
+        guard let product = product else { return "" }
+        return String(format: "$%.2f", product.price)
     }
 
     var formattedRating: String {
-        String(format: "%.1f ⭐️ (%d reviews)", product.rating.rate, product.rating.count)
+        guard let product = product else { return "" }
+        return String(format: "%.1f ⭐️ (%d reviews)", product.rating.rate, product.rating.count)
+    }
+
+    // MARK: - Private Methods
+    private func loadProduct() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            product = try await productRepository.fetchProduct(id: productId)
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to load product: \(error.localizedDescription)"
+        }
     }
 
     // MARK: - Public Methods
@@ -52,22 +78,23 @@ extension ProductDetailViewModel: Routable {
         guard let idParam = parameters["id"], let productId = Int(idParam) else {
             return nil
         }
-        // In a real app, fetch from repository
-        let product = Product.mockList.first { $0.id == productId } ?? Product.mock
-        return .productDetail(product)
+        return .productDetail(id: productId)
     }
 
     static func extractParameters(from route: Route) -> [String: String] {
-        if case .productDetail(let product) = route {
-            return ["id": "\(product.id)"]
+        if case .productDetail(let id) = route {
+            return ["id": "\(id)"]
         }
         return [:]
     }
 
-
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        if case .productDetail(let product) = route {
-            let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+        if case .productDetail(let id) = route {
+            let viewModel = ProductDetailViewModel(
+                productId: id,
+                productRepository: DIContainer.shared.productRepository,
+                coordinator: coordinator
+            )
             return AnyView(ProductDetailView(viewModel: viewModel))
         } else {
             return AnyView(Text("Invalid route for ProductDetail").foregroundColor(.red))

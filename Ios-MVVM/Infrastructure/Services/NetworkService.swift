@@ -37,6 +37,13 @@ class NetworkService: NetworkServiceProtocol {
     }
 
     func request<T: Decodable>(endpoint: String, method: HTTPMethod = .get) async throws -> T {
+        // For development: Return mock data for specific endpoints
+        if let mockData = getMockData(for: endpoint), let typedData = mockData as? T {
+            // Simulate network delay
+            try await Task.sleep(nanoseconds: 500_000_000)
+            return typedData
+        }
+
         guard let url = URL(string: baseURL + endpoint) else {
             throw NetworkError.invalidURL
         }
@@ -68,5 +75,30 @@ class NetworkService: NetworkServiceProtocol {
         } catch {
             throw NetworkError.networkError(error)
         }
+    }
+
+    // MARK: - Mock Data Helper
+    private func getMockData(for endpoint: String) -> Any? {
+        // Handle brochure endpoints
+        if endpoint == "/brochures" {
+            return Brochure.mockList
+        } else if endpoint.hasPrefix("/brochures/") {
+            let idString = endpoint.replacingOccurrences(of: "/brochures/", with: "")
+            if let id = Int(idString) {
+                return Brochure.mockList.first(where: { $0.id == id }) ?? Brochure.mock
+            }
+        }
+
+        // Handle product endpoints
+        if endpoint == "/products" {
+            return Product.mockList
+        } else if endpoint.hasPrefix("/products/") {
+            let idString = endpoint.replacingOccurrences(of: "/products/", with: "")
+            if let id = Int(idString) {
+                return Product.mockList.first(where: { $0.id == id }) ?? Product.mock
+            }
+        }
+
+        return nil
     }
 }

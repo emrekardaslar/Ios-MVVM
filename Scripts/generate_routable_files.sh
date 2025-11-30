@@ -404,9 +404,8 @@ for i in "${!TYPE_NAMES[@]}"; do
 
     # Check if path has parameters (contains :)
     if [[ $PATH == *":"* ]]; then
-        # Extract model type from ViewModel name (e.g., ProductDetailViewModel -> Product)
-        MODEL=$(echo "$TYPE" | /usr/bin/sed 's/DetailViewModel//' | /usr/bin/sed 's/ViewModel//')
-        /bin/echo "    case ${ROUTE_ID}(${MODEL})" >> "${ROUTE_OUTPUT}"
+        # For parameterized routes, use id: Int instead of full model objects
+        /bin/echo "    case ${ROUTE_ID}(id: Int)" >> "${ROUTE_OUTPUT}"
     else
         /bin/echo "    case ${ROUTE_ID}" >> "${ROUTE_OUTPUT}"
     fi
