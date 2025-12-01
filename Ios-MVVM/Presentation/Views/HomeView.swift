@@ -15,8 +15,6 @@ struct HomeView: View {
             VStack(spacing: 24) {
                 welcomeSection
 
-                quickActionsSection
-
                 statsSection
 
                 Spacer()
@@ -48,31 +46,6 @@ struct HomeView: View {
         .cornerRadius(16)
     }
 
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Quick Actions")
-                .font(.headline)
-
-            HStack(spacing: 16) {
-                QuickActionCard(
-                    icon: "bag.fill",
-                    title: "Browse Products",
-                    color: .blue
-                ) {
-                    viewModel.navigateToProducts()
-                }
-
-                QuickActionCard(
-                    icon: "heart.fill",
-                    title: "Favorites",
-                    color: .red
-                ) {
-                    // Future: Navigate to favorites
-                }
-            }
-        }
-    }
-
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Overview")
@@ -88,56 +61,7 @@ struct HomeView: View {
                         viewModel.navigateToOrders()
                     }
                 )
-
-                StatCard(
-                    icon: "star.fill",
-                    title: "Reviews",
-                    value: "8",
-                    color: .orange,
-                    action: {
-                        viewModel.navigateToReviews()
-                    }
-                )
-
-                StatCard(
-                    icon: "bookmark.fill",
-                    title: "Saved",
-                    value: "2",
-                    color: .purple,
-                    action: {
-                        viewModel.navigateToSaved()
-                    }
-                )
             }
-        }
-    }
-}
-
-// MARK: - Quick Action Card Component
-struct QuickActionCard: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 32))
-                    .foregroundColor(color)
-
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
         }
     }
 }

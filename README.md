@@ -48,110 +48,138 @@ extension SettingsViewModel: Routable {
 
 ```
 Ios-MVVM/
+├── Domain/
+│   └── Models/
+│       ├── Product.swift
+│       ├── Brochure.swift
+│       └── Order.swift
 ├── Infrastructure/
 │   ├── Repositories/
 │   │   ├── Protocols/
-│   │   │   └── ProductRepositoryProtocol.swift
+│   │   │   ├── ProductRepositoryProtocol.swift
+│   │   │   ├── BrochureRepositoryProtocol.swift
+│   │   │   ├── OrderRepositoryProtocol.swift
+│   │   │   └── FavoritesRepositoryProtocol.swift
 │   │   └── Implementations/
-│   │       └── ProductRepository.swift
+│   │       ├── ProductRepository.swift
+│   │       ├── BrochureRepository.swift
+│   │       ├── OrderRepository.swift
+│   │       └── FavoritesRepository.swift
 │   └── Services/
 │       └── NetworkService.swift
 ├── Application/
-│   ├── ViewModels/
-│   │   ├── HomeViewModel.swift
-│   │   ├── ProductListViewModel.swift
-│   │   ├── ProductDetailViewModel.swift
-│   │   ├── FavoritesViewModel.swift
-│   │   ├── SavedViewModel.swift
-│   │   ├── OrdersViewModel.swift
-│   │   ├── ReviewsViewModel.swift
-│   │   └── BrochuresViewModel.swift
-│   └── Models/
-│       ├── Product.swift
-│       └── Order.swift
+│   └── ViewModels/
+│       ├── HomeViewModel.swift
+│       ├── ProductListViewModel.swift
+│       ├── ProductDetailViewModel.swift
+│       ├── BrochuresViewModel.swift
+│       ├── BrochureDetailViewModel.swift
+│       ├── OrdersViewModel.swift
+│       └── FavoritesViewModel.swift
 ├── Presentation/
 │   ├── Views/
+│   │   ├── Ios_MVVMApp.swift
 │   │   ├── TabBarView.swift
 │   │   ├── ActivitySwitcherView.swift
 │   │   ├── HomeView.swift
 │   │   ├── ProductListView.swift
 │   │   ├── ProductDetailView.swift
-│   │   ├── FavoritesView.swift
-│   │   ├── SavedView.swift
+│   │   ├── BrochuresView.swift
+│   │   ├── BrochureDetailView.swift
 │   │   ├── OrdersView.swift
-│   │   ├── ReviewsView.swift
-│   │   └── BrochuresView.swift
+│   │   └── FavoritesView.swift
 │   └── Coordinator/
 │       ├── Coordinator.swift
 │       ├── AppCoordinator.swift
-│       ├── Activity.swift
+│       ├── Activity.swift (auto-generated)
 │       ├── RouteConfig.swift
 │       ├── Route.swift (auto-generated)
-│       ├── Tab.swift
+│       ├── Tab.swift (auto-generated)
 │       ├── Routable.swift
 │       ├── URLRouter.swift
 │       └── RoutableTypes.swift (auto-generated)
 ├── DI/
 │   └── DIContainer.swift
-├── Scripts/
-│   └── generate_routable_files.sh
-└── App/
-    └── Ios_MVVMApp.swift
+└── Scripts/
+    └── generate_routable_files.sh
 ```
 
 ---
 
 ## Architecture Layers
 
-### 1. Infrastructure Layer
+### 1. Domain Layer
+**Purpose:** Core business entities and models
+
+**Components:**
+- **Models**: Domain models representing business entities
+  - Product, Brochure, Order
+  - Plain Swift structs/classes
+  - Codable conformance for network serialization
+  - Independent of any framework or infrastructure
+
+**Responsibilities:**
+- Define business entities
+- Model validation rules
+- Business rules and constraints
+
+---
+
+### 2. Infrastructure Layer
 **Purpose:** Data access and external service communication
 
 **Components:**
 - **NetworkService**: Handles HTTP requests using URLSession with async/await
+  - Includes mock data support for development
+  - Returns mock data for configured endpoints
+  - Simulates network delay with Task.sleep
 - **Repositories**: Abstracts data sources and provides domain models
   - Uses protocols for abstraction (testability)
   - Transforms network responses to domain models
+  - All repositories implemented: Product, Brochure, Order, Favorites
+  - Each repository has a Mock implementation for testing
   - Can combine multiple data sources (API, local storage, cache)
 
 **Responsibilities:**
-- API communication
+- API communication (or mock data in development)
 - Data parsing and transformation
 - Error handling at network level
 
 ---
 
-### 2. Application Layer
+### 3. Application Layer
 **Purpose:** Business logic and state management
 
 **Components:**
 - **ViewModels**:
   - Contains business logic
-  - Manages UI state using `@Published` properties
-  - Communicates with repositories for data
-  - Uses URL-based navigation
+  - Manages UI state using `@Published` properties (data, isLoading, errorMessage)
+  - Communicates with repositories for data via async/await
+  - All ViewModels load data asynchronously in their init methods
+  - Implements retry mechanisms for error recovery
+  - Uses URL-based navigation via Coordinator
   - No direct UIKit/SwiftUI dependencies (testable)
-
-- **Models**:
-  - Domain models (business entities)
-  - Plain Swift structs/classes
+  - Conforms to Routable protocol for routing configuration
 
 **Responsibilities:**
 - Business logic execution
-- State management
+- Async data loading and state management
 - Data transformation for UI
-- Validation
+- Navigation triggering
+- Error handling and retry logic
 
 ---
 
-### 3. Presentation Layer
+### 4. Presentation Layer
 **Purpose:** User interface and navigation
 
 **Components:**
 - **Views (SwiftUI)**:
-  - Displays UI
-  - Observes ViewModel state
+  - Displays UI with loading, error, empty, and content states
+  - Observes ViewModel state via @Published properties
   - Delegates user actions to ViewModel
   - No business logic
+  - Uses @StateObject for ViewModel lifecycle management
 
 - **Coordinator**:
   - Manages navigation flow and activities
@@ -159,9 +187,10 @@ Ios-MVVM/
   - Creates Views with their ViewModels
   - Handles deep linking, URLs, and routing
   - Manages activity switching
+  - Provides navigation methods to ViewModels
 
 **Responsibilities:**
-- UI rendering
+- UI rendering (loading spinners, error messages, content)
 - User interaction handling
 - Screen navigation
 - Activity management
@@ -300,7 +329,7 @@ extension HomeViewModel: Routable {
 extension ProductDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             // No tab - opens in current tab
             path: "/products/:id"
         )
@@ -310,20 +339,25 @@ extension ProductDetailViewModel: Routable {
         guard let id = parameters["id"], let productId = Int(id) else {
             return nil
         }
-        let product = Product.mockList.first { $0.id == productId } ?? Product.mock
-        return .productDetail(product)
+        // Store only the ID, not the full object
+        return .productDetail(productId: productId)
     }
 
     static func extractParameters(from route: Route) -> [String: String] {
-        if case .productDetail(let product) = route {
-            return ["id": "\(product.id)"]
+        if case .productDetail(let productId) = route {
+            return ["id": "\(productId)"]
         }
         return [:]
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        if case .productDetail(let product) = route {
-            let viewModel = ProductDetailViewModel(product: product, coordinator: coordinator)
+        if case .productDetail(let productId) = route {
+            // ViewModel fetches the product data asynchronously
+            let viewModel = ProductDetailViewModel(
+                productId: productId,
+                productRepository: DIContainer.shared.productRepository,
+                coordinator: coordinator
+            )
             return AnyView(ProductDetailView(viewModel: viewModel))
         }
         return AnyView(Text("Invalid route").foregroundColor(.red))
@@ -336,25 +370,32 @@ extension ProductDetailViewModel: Routable {
 ```
 1. User Action / External Trigger
    ↓
-   coordinator.navigate(to: "https://myapp.com/products/123?tab=products")
+   coordinator.navigate(to: "https://myapp.com/products/123")
    ↓
 2. URLRouter.route(from: URL)
-   - Extracts tab query parameter: "products"
    - Matches path pattern: "/products/:id"
    - Extracts path parameters: ["id": "123"]
    - Calls ProductDetailViewModel.createRoute(["id": "123"])
    - Gets RouteConfig from ProductDetailViewModel
+   - Checks if ViewModel has a tab in its config
    ↓
-   Returns: (activity: .ecommerce, tab: .products, route: .productDetail(Product))
+   Returns: (activity: .ecommerce, tab: nil, route: .productDetail(productId: 123))
+   (tab is nil because ProductDetailViewModel doesn't declare a tab - it's a detail view)
    ↓
 3. AppCoordinator
    - Switch activity if different
-   - Switch tab if specified (from URL or config)
+   - Switch tab if ViewModel declared one (in this case, no tab so stays on current tab)
    - Lookup ViewModel using routableTypeMap[route.identifier]
    - Call ViewModel.createView(route, coordinator)
+   - ViewModel receives productId and repository
+   - ViewModel loads product data asynchronously
    ↓
-4. View Displayed
+4. View Displayed with loading → content states
 ```
+
+**Tab Switching Behavior:**
+- ViewModels with `tab` in RouteConfig (like ProductListViewModel, FavoritesViewModel) → Auto-switch to that tab
+- ViewModels without `tab` in RouteConfig (like ProductDetailViewModel, OrdersViewModel) → Open in current tab
 
 ### URL Pattern Matching
 
@@ -363,15 +404,6 @@ Supports dynamic parameters with type-safe extraction:
 - `/products/:id` → Matches `/products/123`, extracts `id=123`
 - `/brochures/:id` → Matches `/brochures/5`, extracts `id=5`
 - Multiple parameters: `/users/:userId/orders/:orderId`
-
-### Tab Switching via URL
-
-URLs can include optional `?tab=` query parameter:
-```
-myapp://products/1              → Opens in current tab
-myapp://products/1?tab=products → Switches to Products tab first
-myapp://cart?tab=cart           → Switches to Cart tab
-```
 
 ---
 
@@ -406,14 +438,11 @@ All route cases with associated values:
 enum Route: Hashable {
     case home
     case productList
-    case productDetail(Product)
-    case favorites
-    case cart
-    case saved
-    case orders
-    case reviews
+    case productDetail(productId: Int)
     case brochures
-    case brochureDetail(Brochure)
+    case brochureDetail(brochureId: Int)
+    case orders
+    case favorites
 
     var identifier: String {
         Mirror(reflecting: self).children.first?.label ?? String(describing: self)
@@ -431,13 +460,10 @@ let routableTypes: [any Routable.Type] = [
     HomeViewModel.self,
     ProductListViewModel.self,
     ProductDetailViewModel.self,
-    FavoritesViewModel.self,
-    CartViewModel.self,
-    SavedViewModel.self,
-    OrdersViewModel.self,
-    ReviewsViewModel.self,
     BrochuresViewModel.self,
-    BrochureDetailViewModel.self
+    BrochureDetailViewModel.self,
+    OrdersViewModel.self,
+    FavoritesViewModel.self
 ]
 
 // O(1) route identifier to ViewModel lookup
@@ -445,13 +471,10 @@ let routableTypeMap: [String: any Routable.Type] = [
     "home": HomeViewModel.self,
     "productList": ProductListViewModel.self,
     "productDetail": ProductDetailViewModel.self,
-    "favorites": FavoritesViewModel.self,
-    "cart": CartViewModel.self,
-    "saved": SavedViewModel.self,
-    "orders": OrdersViewModel.self,
-    "reviews": ReviewsViewModel.self,
     "brochures": BrochuresViewModel.self,
-    "brochureDetail": BrochureDetailViewModel.self
+    "brochureDetail": BrochureDetailViewModel.self,
+    "orders": OrdersViewModel.self,
+    "favorites": FavoritesViewModel.self
 ]
 ```
 
@@ -495,7 +518,6 @@ enum Tab: String, CaseIterable {
     case home
     case products
     case favorites
-    case cart
     case brochures
 
     var title: String {
@@ -503,7 +525,6 @@ enum Tab: String, CaseIterable {
         case .home: return "Home"
         case .products: return "Products"
         case .favorites: return "Favorites"
-        case .cart: return "Cart"
         case .brochures: return "Brochures"
         }
     }
@@ -513,7 +534,6 @@ enum Tab: String, CaseIterable {
         case .home: return "house.fill"
         case .products: return "bag.fill"
         case .favorites: return "heart.fill"
-        case .cart: return "cart.fill"
         case .brochures: return "book.fill"
         }
     }
@@ -523,7 +543,6 @@ enum Tab: String, CaseIterable {
         case .home: return .ecommerce
         case .products: return .ecommerce
         case .favorites: return .ecommerce
-        case .cart: return .ecommerce
         case .brochures: return .brochure
         }
     }
@@ -533,7 +552,6 @@ enum Tab: String, CaseIterable {
         case .home: return .home
         case .products: return .productList
         case .favorites: return .favorites
-        case .cart: return .cart
         case .brochures: return .brochures
         }
     }
@@ -606,7 +624,7 @@ struct SettingsView: View {
 
 4. Use anywhere:
 ```swift
-coordinator.navigate(to: "myapp://settings?tab=settings")
+coordinator.navigate(to: "myapp://settings")
 ```
 
 **Example 2: Add a Detail View (Order Detail)**
@@ -616,30 +634,35 @@ coordinator.navigate(to: "myapp://settings?tab=settings")
 extension OrderDetailViewModel: Routable {
     static var routeConfig: RouteConfig {
         RouteConfig(
-            activity: .ecommerce,
+            activity: "ecommerce",
             // No tab - opens in current tab
             path: "/orders/:id"
         )
     }
 
     static func createRoute(from parameters: [String: String]) -> Route? {
-        guard let id = parameters["id"], let orderId = Int(id) else {
+        guard let id = parameters["id"] else {
             return nil
         }
-        let order = Order.mockOrders.first { $0.id == orderId } ?? Order.mock
-        return .orderDetail(order)
+        // Store only the ID
+        return .orderDetail(orderId: id)
     }
 
     static func extractParameters(from route: Route) -> [String: String] {
-        if case .orderDetail(let order) = route {
-            return ["id": "\(order.id)"]
+        if case .orderDetail(let orderId) = route {
+            return ["id": orderId]
         }
         return [:]
     }
 
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        if case .orderDetail(let order) = route {
-            let viewModel = OrderDetailViewModel(order: order, coordinator: coordinator)
+        if case .orderDetail(let orderId) = route {
+            // ViewModel loads order data asynchronously
+            let viewModel = OrderDetailViewModel(
+                orderId: orderId,
+                orderRepository: DIContainer.shared.orderRepository,
+                coordinator: coordinator
+            )
             return AnyView(OrderDetailView(viewModel: viewModel))
         }
         return AnyView(Text("Invalid route").foregroundColor(.red))
@@ -647,9 +670,9 @@ extension OrderDetailViewModel: Routable {
 }
 ```
 
-2. Create `OrderDetailView.swift`
+2. Create `OrderDetailView.swift` with loading/error/content states
 
-3. **Build project** → `.orderDetail(Order)` route added, no tab created
+3. **Build project** → `.orderDetail(orderId: String)` route added, no tab created
 
 4. Navigate from OrdersView:
 ```swift
@@ -747,13 +770,26 @@ Simple container for managing dependencies:
 class DIContainer {
     static let shared = DIContainer()
 
-    private(set) lazy var networkService = NetworkService()
-    private(set) lazy var productRepository: ProductRepositoryProtocol =
+    // Services
+    lazy var networkService: NetworkServiceProtocol = NetworkService()
+
+    // Repositories
+    lazy var productRepository: ProductRepositoryProtocol =
         ProductRepository(networkService: networkService)
 
-    private weak var coordinator: AppCoordinator?
+    lazy var brochureRepository: BrochureRepositoryProtocol =
+        BrochureRepository(networkService: networkService)
 
-    func setCoordinator(_ coordinator: AppCoordinator) {
+    lazy var orderRepository: OrderRepositoryProtocol =
+        OrderRepository(networkService: networkService)
+
+    lazy var favoritesRepository: FavoritesRepositoryProtocol =
+        FavoritesRepository(networkService: networkService)
+
+    // Coordinator
+    private(set) var coordinator: (any Coordinator)?
+
+    func setCoordinator(_ coordinator: any Coordinator) {
         self.coordinator = coordinator
     }
 }
@@ -766,26 +802,197 @@ class DIContainer {
 
 ---
 
+## Mock Data Strategy
+
+### Development Mode
+
+The application uses mock data for development without requiring a backend server:
+
+**NetworkService** intercepts requests and returns mock data:
+```swift
+func request<T: Decodable>(endpoint: String, method: HTTPMethod) async throws -> T {
+    // Check for mock data first
+    if let mockData = getMockData(for: endpoint), let typedData = mockData as? T {
+        // Simulate network delay
+        try await Task.sleep(nanoseconds: 500_000_000)
+        return typedData
+    }
+
+    // Fall back to actual network request
+    // ...
+}
+```
+
+**Supported Mock Endpoints:**
+- `/products` → Returns Product.mockList
+- `/products/:id` → Returns specific product
+- `/brochures` → Returns Brochure.mockList
+- `/brochures/:id` → Returns specific brochure
+- `/orders` → Returns Order.mockOrders
+- `/orders/:id` → Returns specific order
+- `/favorites` → Returns favorite products list
+
+**Benefits:**
+- ✅ No backend required for UI development
+- ✅ Consistent test data across team
+- ✅ Simulated network delays for realistic UX
+- ✅ Easy to switch between mock and real API
+- ✅ Offline development support
+
+### Mock Repositories
+
+Each repository has a corresponding Mock implementation for testing:
+- `MockProductRepository`
+- `MockBrochureRepository`
+- `MockOrderRepository`
+- `MockFavoritesRepository`
+
+These can be injected via DIContainer for unit testing and SwiftUI previews.
+
+---
+
+## ViewModel Pattern
+
+All ViewModels follow a consistent pattern for data loading and state management:
+
+### Standard ViewModel Structure
+
+```swift
+@MainActor
+class ExampleViewModel: ObservableObject {
+    // MARK: - Published Properties
+    @Published var items: [Item] = []
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+
+    // MARK: - Dependencies
+    private let repository: RepositoryProtocol
+    private weak var coordinator: Coordinator?
+
+    // MARK: - Initialization
+    init(repository: RepositoryProtocol, coordinator: Coordinator?) {
+        self.repository = repository
+        self.coordinator = coordinator
+
+        // Load data asynchronously
+        Task {
+            await loadItems()
+        }
+    }
+
+    // MARK: - Public Methods
+    func loadItems() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            items = try await repository.fetchItems()
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to load items: \(error.localizedDescription)"
+        }
+    }
+
+    func retry() {
+        Task {
+            await loadItems()
+        }
+    }
+
+    func didSelectItem(_ item: Item) {
+        coordinator?.navigate(to: "https://myapp.com/items/\(item.id)")
+    }
+}
+```
+
+### Standard View Structure
+
+Views handle four states based on ViewModel properties:
+
+```swift
+struct ExampleView: View {
+    @StateObject var viewModel: ExampleViewModel
+
+    var body: some View {
+        Group {
+            if viewModel.isLoading {
+                ProgressView("Loading...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error").font(.headline)
+                    Text(errorMessage).foregroundColor(.secondary)
+                    Button("Retry") { viewModel.retry() }
+                        .buttonStyle(.bordered)
+                }
+                .padding()
+            } else if viewModel.items.isEmpty {
+                emptyStateView
+            } else {
+                contentView
+            }
+        }
+        .navigationTitle("Items")
+    }
+
+    private var contentView: some View {
+        List(viewModel.items) { item in
+            Button(action: { viewModel.didSelectItem(item) }) {
+                Text(item.name)
+            }
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tray").font(.system(size: 60))
+            Text("No Items").font(.title2)
+        }
+    }
+}
+```
+
+### State Management Pattern
+
+**Four UI States:**
+1. **Loading**: `isLoading = true` → Show ProgressView
+2. **Error**: `errorMessage != nil` → Show error message with retry button
+3. **Empty**: `items.isEmpty` → Show empty state illustration
+4. **Content**: `items.count > 0` → Show data in list/grid
+
+**Key Principles:**
+- All async operations happen in ViewModels
+- Views are purely declarative and stateless
+- Error states always provide retry mechanism
+- Loading states provide user feedback
+- Empty states guide user on next action
+
+---
+
 ## Data Flow Examples
 
-### Example 1: Loading Products
+### Example 1: Loading Products (Async/Await Pattern)
 
 ```
 1. User opens Products tab
    ↓
-2. ProductListView appears
+2. ProductListView appears with ProductListViewModel
    ↓
-3. ViewModel.loadProducts() called
+3. ViewModel init → Task { await loadProducts() }
    ↓
-4. Repository.fetchProducts()
+4. ViewModel sets isLoading = true
    ↓
-5. NetworkService makes API call
+5. Repository.fetchProducts() async throws
    ↓
-6. Data flows back: Network → Repository → ViewModel
+6. NetworkService.request() → Returns mock data (or API call)
    ↓
-7. ViewModel updates @Published property
+7. Data flows back: Network → Repository → ViewModel
    ↓
-8. SwiftUI automatically updates view
+8. ViewModel updates @Published properties:
+   - products = fetchedProducts
+   - isLoading = false
+   ↓
+9. SwiftUI automatically re-renders view with product list
 ```
 
 ### Example 2: URL Navigation
@@ -879,40 +1086,43 @@ func testURLParsing() {
 ## Key Principles
 
 1. **URL-Driven Navigation**: Single API for all navigation sources
-2. **ViewModel-Driven Routing**: ViewModels define their own routes
-3. **Activity Isolation**: Clean separation of app contexts
-4. **Auto-Generation**: Build-time code generation eliminates boilerplate
-5. **Separation of Concerns**: Each layer has a single responsibility
-6. **Dependency Inversion**: Depend on abstractions (protocols)
-7. **Testability**: All components can be tested in isolation
-8. **Scalability**: Easy to add new features/activities/routes
+2. **ViewModel-Driven Routing**: ViewModels define their own routes and tab behavior
+3. **Smart Tab Switching**: Tab switching determined by ViewModel config, not URL parameters
+4. **Activity Isolation**: Clean separation of app contexts
+5. **Auto-Generation**: Build-time code generation eliminates boilerplate
+6. **Separation of Concerns**: Each layer has a single responsibility
+7. **Dependency Inversion**: Depend on abstractions (protocols)
+8. **Testability**: All components can be tested in isolation
+9. **Scalability**: Easy to add new features/activities/routes
 
 ---
 
 ## Current Implementation
 
 ### Activities (Auto-Generated)
-- **Ecommerce**: 4 tabs (Home, Products, Favorites, Cart)
+- **Ecommerce**: 3 tabs (Home, Products, Favorites)
 - **Brochure**: 1 tab (Brochures)
 
 ### Tabs (Auto-Generated)
 - **Home** - Index 0, Icon: house.fill (Ecommerce)
 - **Products** - Index 1, Icon: bag.fill (Ecommerce)
 - **Favorites** - Index 2, Icon: heart.fill (Ecommerce)
-- **Cart** - Index 3, Icon: cart.fill (Ecommerce)
 - **Brochures** - Index 0, Icon: book.fill (Brochure)
 
-### Routes (10 total, Auto-Generated)
-- Home (`/home`)
-- Product List (`/products`)
-- Product Detail (`/products/:id`) - with parameter
-- Favorites (`/favorites`)
-- Cart (`/cart`)
-- Saved (`/saved`)
-- Orders (`/orders`)
-- Reviews (`/reviews`)
-- Brochures (`/brochures`)
-- Brochure Detail (`/brochures/:id`) - with parameter
+### Routes (7 total, Auto-Generated)
+- Home (`/home`) - Simple home screen with welcome message and Orders overview
+- Product List (`/products`) - List of all products
+- Product Detail (`/products/:id`) - Detail view with parameter
+- Brochures (`/brochures`) - List of all brochures
+- Brochure Detail (`/brochures/:id`) - Detail view with parameter
+- Orders (`/orders`) - User's order history
+- Favorites (`/favorites`) - User's favorite products
+
+### Repositories (All Implemented)
+- **ProductRepository**: Fetches products and product details
+- **BrochureRepository**: Fetches brochures and brochure details
+- **OrderRepository**: Fetches orders and order details
+- **FavoritesRepository**: Manages favorite products (fetch, add, remove)
 
 ### Features
 - ✅ **Fully auto-generated routing** - Activities, Tabs, Routes, Mappings
@@ -920,7 +1130,6 @@ func testURLParsing() {
 - ✅ **URL-based navigation** - Internal & external (deeplinks, notifications)
 - ✅ **Activity switching** - Manual via UI + automatic via URL
 - ✅ **Deep linking support** - Custom scheme (`myapp://`) + Universal links
-- ✅ **Tab query parameters** - `?tab=products` for explicit tab switching
 - ✅ **Multi-tab navigation** - Independent navigation stacks per tab
 - ✅ **State preservation** - Navigation state maintained per tab
 - ✅ **Pattern matching** - Dynamic URL parameters (`:id`, `:userId`, etc.)

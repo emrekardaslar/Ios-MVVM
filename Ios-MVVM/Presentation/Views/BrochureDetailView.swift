@@ -11,24 +11,39 @@ struct BrochureDetailView: View {
     @StateObject var viewModel: BrochureDetailViewModel
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                brochureImage
+        Group {
+            if viewModel.isLoading {
+                ProgressView("Loading brochure...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+            } else if let brochure = viewModel.brochure {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        brochureImage(brochure)
 
-                brochureInfo
+                        brochureInfo(brochure)
 
-                actionButtons
+                        actionButtons
 
-                Spacer()
+                        Spacer()
+                    }
+                    .padding()
+                }
+                .navigationTitle(brochure.title)
             }
-            .padding()
         }
-        .navigationTitle(viewModel.brochure.title)
         .navigationBarTitleDisplayMode(.large)
     }
 
-    private var brochureImage: some View {
-        AsyncImage(url: URL(string: viewModel.brochure.imageUrl)) { image in
+    private func brochureImage(_ brochure: Brochure) -> some View {
+        AsyncImage(url: URL(string: brochure.imageUrl)) { image in
             image
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -45,11 +60,11 @@ struct BrochureDetailView: View {
         .shadow(color: .gray.opacity(0.3), radius: 8, x: 0, y: 4)
     }
 
-    private var brochureInfo: some View {
+    private func brochureInfo(_ brochure: Brochure) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             // Category Badge
             HStack {
-                Text(viewModel.brochure.category)
+                Text(brochure.category)
                     .font(.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, 12)
@@ -66,7 +81,7 @@ struct BrochureDetailView: View {
             }
 
             // Description
-            Text(viewModel.brochure.description)
+            Text(brochure.description)
                 .font(.body)
                 .foregroundColor(.primary)
                 .lineSpacing(6)
@@ -116,7 +131,8 @@ struct BrochureDetailView: View {
     NavigationStack {
         BrochureDetailView(
             viewModel: BrochureDetailViewModel(
-                brochure: Brochure.mock,
+                brochureId: 1,
+                brochureRepository: DIContainer.shared.brochureRepository,
                 coordinator: nil
             )
         )

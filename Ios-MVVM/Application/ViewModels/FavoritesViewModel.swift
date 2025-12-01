@@ -13,24 +13,35 @@ import SwiftUI
 class FavoritesViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var favoriteProducts: [Product] = []
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
 
     // MARK: - Dependencies
+    private let favoritesRepository: FavoritesRepositoryProtocol
     private weak var coordinator: Coordinator?
 
     // MARK: - Initialization
-    init(coordinator: Coordinator?) {
+    init(favoritesRepository: FavoritesRepositoryProtocol, coordinator: Coordinator?) {
+        self.favoritesRepository = favoritesRepository
         self.coordinator = coordinator
-        loadFavorites()
+
+        Task {
+            await loadFavorites()
+        }
     }
 
     // MARK: - Public Methods
-    func loadFavorites() {
-        // For now, using mock data
-        // In a real app, this would load from UserDefaults, CoreData, or a favorites service
-        favoriteProducts = [
-            Product.mockList[0],
-            Product.mockList[2]
-        ]
+    func loadFavorites() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            favoriteProducts = try await favoritesRepository.fetchFavorites()
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to load favorites: \(error.localizedDescription)"
+        }
     }
 
     func didSelectProduct(_ product: Product) {
@@ -38,7 +49,20 @@ class FavoritesViewModel: ObservableObject {
     }
 
     func removeFavorite(_ product: Product) {
-        favoriteProducts.removeAll { $0.id == product.id }
+        Task {
+            do {
+                try await favoritesRepository.removeFavorite(productId: product.id)
+                favoriteProducts.removeAll { $0.id == product.id }
+            } catch {
+                errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func retry() {
+        Task {
+            await loadFavorites()
+        }
     }
 }
 
@@ -60,9 +84,11 @@ extension FavoritesViewModel: Routable {
         return [:]
     }
 
-
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        let viewModel = FavoritesViewModel(coordinator: coordinator)
+        let viewModel = FavoritesViewModel(
+            favoritesRepository: DIContainer.shared.favoritesRepository,
+            coordinator: coordinator
+        )
         return AnyView(FavoritesView(viewModel: viewModel))
     }
 }

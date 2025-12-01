@@ -14,30 +14,45 @@ class OrdersViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var orders: [Order] = []
     @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
 
     // MARK: - Dependencies
+    private let orderRepository: OrderRepositoryProtocol
     private weak var coordinator: Coordinator?
 
     // MARK: - Initialization
-    init(coordinator: Coordinator?) {
+    init(orderRepository: OrderRepositoryProtocol, coordinator: Coordinator?) {
+        self.orderRepository = orderRepository
         self.coordinator = coordinator
-        loadOrders()
+
+        Task {
+            await loadOrders()
+        }
     }
 
     // MARK: - Public Methods
-    func loadOrders() {
+    func loadOrders() async {
         isLoading = true
-        // Simulate API delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.orders = Order.mockOrders
-            self?.isLoading = false
+        errorMessage = nil
+
+        do {
+            orders = try await orderRepository.fetchOrders()
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to load orders: \(error.localizedDescription)"
         }
     }
 
     func didSelectOrder(_ order: Order) {
         // In a real app, this would navigate to order detail
-        // For now, we'll just print
         print("Selected order: \(order.id)")
+    }
+
+    func retry() {
+        Task {
+            await loadOrders()
+        }
     }
 }
 
@@ -58,9 +73,11 @@ extension OrdersViewModel: Routable {
         return [:]
     }
 
-
     static func createView(from route: Route, coordinator: Coordinator) -> AnyView {
-        let viewModel = OrdersViewModel(coordinator: coordinator)
+        let viewModel = OrdersViewModel(
+            orderRepository: DIContainer.shared.orderRepository,
+            coordinator: coordinator
+        )
         return AnyView(OrdersView(viewModel: viewModel))
     }
 }

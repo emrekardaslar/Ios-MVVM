@@ -11,29 +11,44 @@ struct ProductDetailView: View {
     @StateObject var viewModel: ProductDetailViewModel
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                productImage
-
-                VStack(alignment: .leading, spacing: 12) {
-                    categoryBadge
-
-                    productTitle
-
-                    priceAndRating
-
-                    Divider()
-
-                    descriptionSection
+        Group {
+            if viewModel.isLoading {
+                ProgressView("Loading product...")
+            } else if let errorMessage = viewModel.errorMessage {
+                VStack(spacing: 16) {
+                    Text("Error")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.horizontal)
+                .padding()
+            } else if let product = viewModel.product {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        productImage(product)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            categoryBadge(product)
+
+                            productTitle(product)
+
+                            priceAndRating(product)
+
+                            Divider()
+
+                            descriptionSection(product)
+                        }
+                        .padding(.horizontal)
+                    }
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var productImage: some View {
-        AsyncImage(url: URL(string: viewModel.product.image)) { image in
+    private func productImage(_ product: Product) -> some View {
+        AsyncImage(url: URL(string: product.image)) { image in
             image
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -45,8 +60,8 @@ struct ProductDetailView: View {
         .background(Color(.systemGray6))
     }
 
-    private var categoryBadge: some View {
-        Text(viewModel.product.category.uppercased())
+    private func categoryBadge(_ product: Product) -> some View {
+        Text(product.category.uppercased())
             .font(.caption)
             .fontWeight(.semibold)
             .foregroundColor(.blue)
@@ -56,14 +71,14 @@ struct ProductDetailView: View {
             .cornerRadius(8)
     }
 
-    private var productTitle: some View {
-        Text(viewModel.product.title)
+    private func productTitle(_ product: Product) -> some View {
+        Text(product.title)
             .font(.title2)
             .fontWeight(.bold)
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var priceAndRating: some View {
+    private func priceAndRating(_ product: Product) -> some View {
         HStack(alignment: .center, spacing: 16) {
             Text(viewModel.formattedPrice)
                 .font(.title)
@@ -75,25 +90,25 @@ struct ProductDetailView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 4) {
                     ForEach(0..<5) { index in
-                        Image(systemName: index < Int(viewModel.product.rating.rate) ? "star.fill" : "star")
+                        Image(systemName: index < Int(product.rating.rate) ? "star.fill" : "star")
                             .font(.caption)
                             .foregroundColor(.yellow)
                     }
                 }
 
-                Text("(\(viewModel.product.rating.count) reviews)")
+                Text("(\(product.rating.count) reviews)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
     }
 
-    private var descriptionSection: some View {
+    private func descriptionSection(_ product: Product) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Description")
                 .font(.headline)
 
-            Text(viewModel.product.description)
+            Text(product.description)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -106,7 +121,8 @@ struct ProductDetailView: View {
     NavigationStack {
         ProductDetailView(
             viewModel: ProductDetailViewModel(
-                product: Product.mock,
+                productId: 1,
+                productRepository: DIContainer.shared.productRepository,
                 coordinator: nil
             )
         )

@@ -15,7 +15,7 @@
 
 import Foundation
 
-struct Order: Identifiable, Hashable {
+struct Order: Identifiable, Hashable, Codable {
     let id: String
     let date: Date
     let status: OrderStatus
@@ -33,14 +33,14 @@ struct Order: Identifiable, Hashable {
     }
 }
 
-struct OrderItem: Identifiable, Hashable {
+struct OrderItem: Identifiable, Hashable, Codable {
     let id = UUID()
     let productName: String
     let quantity: Int
     let price: Double
 }
 
-enum OrderStatus: String, Hashable {
+enum OrderStatus: String, Hashable, Codable {
     case pending = "Pending"
     case processing = "Processing"
     case shipped = "Shipped"
